@@ -21,12 +21,12 @@ export default function Dashboard({ navigation, route }) {
       <Text style={styles.text}>Logged in as: {user?.email}</Text>
       <Text style={styles.text}>Role: {user?.role}</Text>
       
-      <TouchableOpacity 
+      {/* <TouchableOpacity 
         style={styles.button} 
         onPress={navigateToAdminHome}
       >
         <Text style={styles.buttonText}>Go to Admin Panel</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 }

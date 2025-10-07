@@ -18,6 +18,7 @@
     "express": "^5.1.0",
     "mysql2": "^3.15.1",
     "nodejs": "^0.0.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "react-native-config": "^1.5.9"
   }
 }
