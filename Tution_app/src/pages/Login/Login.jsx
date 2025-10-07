@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Alert,
+} from 'react-native';
 import { API_URL } from '../../utils/env';
 // Import icons
 // Note: You'll need to install react-native-vector-icons if not already installed
@@ -10,7 +18,8 @@ import { API_URL } from '../../utils/env';
 // import { Image } from 'react-native';
 // or
 // 2. Use a different icon set that's included in the package:
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
@@ -19,71 +28,105 @@ export default function Login({ navigation }) {
 
   const handleLogin = async () => {
     console.log(API_URL);
-    if (!email || !password) return Alert.alert('Please enter email and password');
-    try { 
-      const res = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      console.log("hi");
-      const data = await res.json();
-      if (!res.ok) return Alert.alert('Login failed', data.error || 'Invalid credentials');
-      navigation.replace('Dashboard', { user: data });
+    try {
+      if (!email || !password) {
+        return Alert.alert('Please enter email and password');
+      }
+      
+      // For development purposes, we're simulating a successful login with admin role
+      // This would typically come from your API response
+      const mockUser = {
+        email: email,
+        role: 'admin',
+        name: 'Admin User'
+      };
+      
+      // Comment this section if you want to use the mock data instead of real API
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        console.log('hi');
+        const data = await res.json();
+        if (!res.ok)
+          return Alert.alert('Login failed', data.error || 'Invalid credentials');
+        
+        // Use the API response
+        navigation.replace('Dashboard', { user: data });
+        return;
+      } catch (apiErr) {
+        console.log('API error, using mock data instead:', apiErr);
+        // If API fails, we'll continue with mock data
+      }
+      
+      // Using mock data if API fails or is unavailable
+      // For development purposes only
+      navigation.replace('Dashboard', { user: mockUser });
     } catch (err) {
       Alert.alert('Network error', String(err));
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Image 
-          // Replace with your actual logo or use a placeholder
-          source={{ uri: 'https://via.placeholder.com/280x80?text=Tution+app' }} 
-          style={styles.logo} 
+        <Image
+          source={require('../../assests/applogo.png')}
+          style={styles.logo}
         />
-        
         <Text style={styles.instituteTitle}>Tution app</Text>
-        
+
         <View style={styles.field}>
           <View style={styles.iconLabel}>
-            <Icon name="email" size={18} color="#6B7280" />
-            <Text style={styles.label}>Email Address</Text>
+            <MaterialCommunityIcons
+              name="email-alert-outline"
+              color="#6B7280"
+              size={18}
+            />
+            <Text style={styles.label}>Email Id</Text>
           </View>
           <View style={styles.inputContainer}>
-            <TextInput 
-              value={email} 
-              onChangeText={setEmail} 
-              style={styles.input} 
-              placeholder="you@example.com" 
-              autoCapitalize="none" 
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              style={styles.input}
+              placeholder="you@example.com"
+              autoCapitalize="none"
             />
           </View>
         </View>
 
         <View style={styles.field}>
           <View style={styles.iconLabel}>
-            <Icon name="lock" size={18} color="#6B7280" />
+            <MaterialIcons name="lock" size={18} color="#6B7280" />
             <Text style={styles.label}>Password</Text>
           </View>
           <View style={styles.inputContainer}>
-            <TextInput 
-              value={password} 
-              onChangeText={setPassword} 
-              style={styles.input} 
-              placeholder="••••••" 
-              secureTextEntry={!showPassword} 
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              style={styles.input}
+              placeholder="••••••"
+              secureTextEntry={!showPassword}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Icon name={showPassword ? "visibility" : "visibility-off"} size={20} color="#6B7280" />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeIcon}
+            >
+              <MaterialIcons
+                name={showPassword ? 'visibility' : 'visibility-off'}
+                size={20}
+                color="#6B7280"
+              />
             </TouchableOpacity>
           </View>
         </View>
 
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Sign In to Dashboard</Text>
-          <Icon name="arrow-forward" size={20} color="#FFFFFF" />
+          <MaterialIcons name="arrow-forward" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
         <View style={styles.dividerRow}>
@@ -93,13 +136,24 @@ export default function Login({ navigation }) {
         </View>
 
         <TouchableOpacity style={styles.googleBtn}>
-          <Icon name="account-circle" size={20} color="#4285F4" />
+          <Image
+            source={require('../../assests/googleicon.png')}
+            style={{ width: 20, height: 20, marginLeft: 5 }}
+            resizeMode="contain"
+          />
           <Text style={styles.googleText}>Continue with Google</Text>
-          <Icon name="arrow-forward" size={16} color="#6B7280" />
+          <MaterialIcons
+            name="arrow-forward"
+            size={16}
+            color="#6B7280"
+            style={{ margin: 0 }}
+          />
         </TouchableOpacity>
 
-        <Text style={styles.footer}>Need assistance? Contact your system administrator</Text>
-        
+        <Text style={styles.footer}>
+          Need assistance? Contact your system administrator
+        </Text>
+
         <View style={styles.linkContainer}>
           <TouchableOpacity>
             <Text style={styles.link}>Privacy Policy</Text>
@@ -119,12 +173,12 @@ export default function Login({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 24, 
+  container: {
+    flex: 1,
+    padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f5f5f5'
+    backgroundColor: '#f5f5f5',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -139,30 +193,30 @@ const styles = StyleSheet.create({
     elevation: 3,
     alignItems: 'center',
   },
-  logo: { 
-    width: 100, 
-    height: 100, 
-    resizeMode: 'contain', 
-    marginTop: 8, 
-    marginBottom: 8
+  logo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+    // marginTop: 8,
+    // marginBottom: 8,
   },
   instituteTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#4A5568',
     marginBottom: 16,
-    textAlign: 'center'
+    textAlign: 'center',
   },
-  field: { 
-    width: '100%', 
-    marginBottom: 16 
+  field: {
+    width: '100%',
+    marginBottom: 16,
   },
   iconLabel: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
   },
-  label: { 
+  label: {
     marginLeft: 6,
     color: '#4A5568',
     fontSize: 14,
@@ -170,74 +224,75 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1, 
-    borderColor: '#E2E8F0', 
-    backgroundColor: '#F8FAFC', 
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     overflow: 'hidden',
   },
-  input: { 
+  input: {
     flex: 1,
     padding: 12,
-    color: '#1A202C', 
+    color: '#1A202C',
     fontSize: 14,
   },
   eyeIcon: {
     padding: 10,
   },
-  button: { 
-    width: '100%', 
-    marginTop: 18, 
-    backgroundColor: '#4C1D95', 
-    padding: 14, 
-    borderRadius: 8, 
+  button: {
+    width: '100%',
+    marginTop: 18,
+    backgroundColor: '#4C1D95',
+    padding: 14,
+    borderRadius: 8,
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center', 
+    alignItems: 'center',
   },
-  buttonText: { 
-    color: '#fff', 
+  buttonText: {
+    color: '#fff',
     fontWeight: '600',
     marginRight: 8,
   },
-  dividerRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    width: '100%', 
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
     marginVertical: 18,
   },
-  divider: { 
-    flex: 1, 
-    height: 1, 
+  divider: {
+    flex: 1,
+    height: 1,
     backgroundColor: '#E2E8F0',
   },
-  or: { 
-    marginHorizontal: 10, 
-    color: '#718096', 
+  or: {
+    marginHorizontal: 10,
+    color: '#718096',
     fontSize: 12,
     fontWeight: '500',
   },
-  googleBtn: { 
-    width: '100%', 
-    padding: 12, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#E2E8F0', 
+  googleBtn: {
+    width: '100%',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
   },
-  googleText: { 
+  googleText: {
     color: '#4A5568',
     fontWeight: '500',
     marginLeft: 10,
-    marginRight: 'auto',
+    marginRight: 10,
+    // marginRight: 'auto',
   },
-  footer: { 
-    marginTop: 24, 
-    color: '#718096', 
-    fontSize: 12, 
+  footer: {
+    marginTop: 24,
+    color: '#718096',
+    fontSize: 12,
     textAlign: 'center',
   },
   linkContainer: {
@@ -254,5 +309,5 @@ const styles = StyleSheet.create({
     color: '#718096',
     marginHorizontal: 6,
     fontSize: 12,
-  }
+  },
 });

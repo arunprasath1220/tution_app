@@ -117,7 +117,7 @@ dependencies {
         implementation jscFlavor
     }
     
-    // Autolinking will handle React Native Vector Icons
 }
 
+apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
