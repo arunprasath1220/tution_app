@@ -26,18 +26,20 @@ export default function AddSubject() {
   const [dbStatus, setDbStatus] = useState(null);
 
   useEffect(() => {
+    console.log("API_URL");
     fetchSubjects();
     checkDatabase(); // Check database status on mount
   }, []);
 
   // Check database connection and structure
   const checkDatabase = async () => {
+    
     try {
       console.log('🔍 Checking database...');
-      const response = await fetch(`${API_URL}/admin/check-db`);
-      const data = await response.json();
-      console.log('📋 Database check result:', data);
-      setDbStatus(data);
+      // const response = await fetch(`${API_URL}/admin/check-db`);
+      // const data = await response.json();
+      // console.log('📋 Database check result:', data);
+      // setDbStatus(data);
     } catch (error) {
       console.error('❌ Database check failed:', error);
       setDbStatus({ success: false, error: error.message });
@@ -98,7 +100,7 @@ export default function AddSubject() {
       
       console.log('📤 Adding subject:', subjectData);
       
-      const response = await fetch(`${API_URL}/admin/subjects`, {
+      const response = await fetch(`${API_URL}/admin/addSubjects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function Dashboard({ route }) {
+export default function StudentDashboard({ route }) { 
   const user = route.params?.user;
   return (
     <View style={styles.container}>

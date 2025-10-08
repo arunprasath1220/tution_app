@@ -9,11 +9,17 @@ export default function Dashboard({ navigation, route }) {
     if (user?.role === 'admin') {
       navigation.replace('AdminHome');
     }
+    else if (user?.role === 'faculty') {
+      navigation.replace('FacultyHome');
+    }
+    else if (user?.role === 'student') {
+      navigation.replace('StudentHome');
+    }
   }, []);
 
-  const navigateToAdminHome = () => {
-    navigation.navigate('AdminHome');
-  };
+  // const navigateToAdminHome = () => {
+  //   navigation.navigate('AdminHome');
+  // };
 
   return (
     <View style={styles.container}>
