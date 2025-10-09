@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -11,40 +11,112 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  FlatList
+  StatusBar,
+  Image,
 } from 'react-native';
 import { API_URL } from '../../utils/env';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
+// You can replace with actual icons if you have a vector icons package installed
+const BOOK_ICON = 'https://img.icons8.com/color/96/000000/book.png';
+
+// Theme color and its variants
+const THEME = {
+  primary: '#4C1D95',      // Main purple theme
+  light: '#6D28D9',        // Lighter purple
+  lighter: '#8B5CF6',      // Even lighter purple
+  lightest: '#A78BFA',     // Lightest purple
+  dark: '#3B0764',         // Darker purple
+  darkest: '#2E0249',      // Darkest purple
+  text: {
+    light: '#F5F3FF',      // Light text color for dark backgrounds
+    dark: '#1F0942',       // Dark text color for light backgrounds
+    muted: '#7C3AED'       // Muted text color
+  },
+  danger: '#DC2626'        // Red color for delete actions
+};
 
 export default function AddSubject() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [standard, setStandard] = useState('');
   const [subjectName, setSubjectName] = useState('');
   const [board, setBoard] = useState('');
   const [loading, setLoading] = useState(false);
   const [subjects, setSubjects] = useState([]);
+  const [nestedSubjects, setNestedSubjects] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [dbStatus, setDbStatus] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+
+  // For edit mode
+  const [editId, setEditId] = useState(null);
+  const [editStandard, setEditStandard] = useState('');
+  const [editSubjectName, setEditSubjectName] = useState('');
+  const [editBoard, setEditBoard] = useState('');
 
   useEffect(() => {
-    console.log("API_URL");
     fetchSubjects();
-    checkDatabase(); // Check database status on mount
   }, []);
 
-  // Check database connection and structure
-  const checkDatabase = async () => {
-    
-    try {
-      console.log('🔍 Checking database...');
-      // const response = await fetch(`${API_URL}/admin/check-db`);
-      // const data = await response.json();
-      // console.log('📋 Database check result:', data);
-      // setDbStatus(data);
-    } catch (error) {
-      console.error('❌ Database check failed:', error);
-      setDbStatus({ success: false, error: error.message });
+  // Group subjects by board and then by standard
+  useEffect(() => {
+    if (subjects.length > 0) {
+      // First group by board
+      const boardGroups = {};
+      
+      subjects.forEach(subject => {
+        const boardName = subject.board || 'Unknown';
+        if (!boardGroups[boardName]) {
+          boardGroups[boardName] = {};
+        }
+        
+        // Then group by standard within each board
+        const std = subject.standard.toString();
+        if (!boardGroups[boardName][std]) {
+          boardGroups[boardName][std] = [];
+        }
+        
+        boardGroups[boardName][std].push(subject);
+      });
+      
+      // Convert to nested structure for rendering
+      const nested = [];
+      
+      // Sort board names alphabetically
+      const sortedBoards = Object.keys(boardGroups).sort();
+      
+      sortedBoards.forEach(boardName => {
+        const standardGroups = boardGroups[boardName];
+        const boardSection = {
+          title: boardName,
+          data: [] // Will contain all standard groups
+        };
+        
+        // Sort standards numerically
+        const sortedStandards = Object.keys(standardGroups)
+          .sort((a, b) => parseInt(a) - parseInt(b));
+        
+        sortedStandards.forEach(std => {
+          // Sort subjects alphabetically within each standard
+          const sortedSubjects = standardGroups[std]
+            .sort((a, b) => a.subjectname.localeCompare(b.subjectname));
+          
+          // Add a standard group to this board's data
+          boardSection.data.push({
+            standard: std,
+            subjects: sortedSubjects
+          });
+        });
+        
+        nested.push(boardSection);
+      });
+      
+      setNestedSubjects(nested);
+    } else {
+      setNestedSubjects([]);
     }
-  };
+  }, [subjects]);
 
   const fetchSubjects = async () => {
     try {
@@ -100,7 +172,7 @@ export default function AddSubject() {
       
       console.log('📤 Adding subject:', subjectData);
       
-      const response = await fetch(`${API_URL}/admin/addSubjects`, {
+      const response = await fetch(`${API_URL}/admin/subjects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,39 +201,209 @@ export default function AddSubject() {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.subjectItem}>
-      <Text style={styles.itemText}>ID: {item.id}</Text>
-      <Text style={styles.itemText}>Standard: {item.standard}</Text>
-      <Text style={styles.itemText}>Subject: {item.subjectname}</Text>
-      <Text style={styles.itemText}>Board: {item.board}</Text>
-      {/* created_at will not show since it's not in the table */}
-    </View>
-  );
+  // Handle edit subject
+  const handleEditSubmit = async () => {
+    if (!editStandard.trim() || !editSubjectName.trim() || !editBoard.trim()) {
+      Alert.alert('Error', 'All fields are required');
+      return;
+    }
+
+    const standardNum = parseInt(editStandard);
+    if (isNaN(standardNum) || standardNum <= 0) {
+      Alert.alert('Error', 'Standard must be a valid positive number');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const subjectData = {
+        standard: standardNum,
+        subjectname: editSubjectName.trim(),
+        board: editBoard.trim()
+      };
+      
+      console.log('📝 Updating subject:', subjectData);
+      
+      // Updated API endpoint to match backend route
+      const response = await fetch(`${API_URL}/admin/updateSubject/${editId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(subjectData)
+      });
+      
+      const data = await response.json();
+      console.log('✅ Update subject response:', data);
+      
+      if (data.success) {
+        Alert.alert('Success', 'Subject updated successfully');
+        setEditModalVisible(false);
+        fetchSubjects(); // Refresh list
+      } else {
+        Alert.alert('Error', data.message || 'Failed to update subject');
+      }
+    } catch (error) {
+      console.error('❌ Update error:', error);
+      Alert.alert('Error', `Failed to update subject: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle delete subject
+  const handleDeleteSubject = async () => {
+    try {
+      setLoading(true);
+      
+      console.log('🗑️ Deleting subject:', selectedSubject.id);
+      
+      // Updated API endpoint to match backend route
+      const response = await fetch(`${API_URL}/admin/deleteSubject/${selectedSubject.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      console.log('✅ Delete subject response:', data);
+      
+      if (data.success) {
+        Alert.alert('Success', 'Subject deleted successfully');
+        setActionModalVisible(false);
+        fetchSubjects(); // Refresh list
+      } else {
+        Alert.alert('Error', data.message || 'Failed to delete subject');
+      }
+    } catch (error) {
+      console.error('❌ Delete error:', error);
+      Alert.alert('Error', `Failed to delete subject: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open subject action modal
+  const openSubjectActionModal = (subject) => {
+    setSelectedSubject(subject);
+    setActionModalVisible(true);
+  };
+
+  // Open edit modal with subject data
+  const openEditModal = () => {
+    if (selectedSubject) {
+      setEditId(selectedSubject.id);
+      setEditStandard(selectedSubject.standard.toString());
+      setEditSubjectName(selectedSubject.subjectname);
+      setEditBoard(selectedSubject.board);
+      setActionModalVisible(false);
+      setEditModalVisible(true);
+    }
+  };
+
+  // Generate a variant of the theme color based on the board name
+  const getBoardColor = (boardName) => {
+    if (!boardName) return THEME.primary;
+    
+    const nameHash = boardName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    // Pick a color variant based on the hash of the name
+    const variants = [
+      THEME.primary,  // Main theme color
+      THEME.light,    // Lighter variant
+      THEME.lighter,  // Even lighter variant
+      THEME.lightest, // Lightest variant
+      THEME.dark,     // Darker variant
+    ];
+    
+    return variants[nameHash % variants.length];
+  };
+
+  const renderBoard = (board, index) => {
+    const boardColor = getBoardColor(board.title);
+    
+    return (
+      <View key={`board-${index}`} style={styles.boardContainer}>
+        {/* Board Header */}
+        <View style={[styles.boardHeader, { borderLeftColor: boardColor }]}>
+          <Text style={styles.boardTitle}>{board.title}</Text>
+          <View style={[styles.boardCounter, { backgroundColor: boardColor }]}>
+            <Text style={styles.boardCounterText}>
+              {board.data.reduce((total, stdGroup) => total + stdGroup.subjects.length, 0)}
+            </Text>
+          </View>
+        </View>
+        
+        {/* Standards within this board */}
+        {board.data.map((standardGroup, stdIndex) => renderStandardGroup(standardGroup, boardColor, stdIndex))}
+      </View>
+    );
+  };
+
+  const renderStandardGroup = (standardGroup, boardColor, index) => {
+    // Use a slightly lighter shade for standard headers
+    const standardColor = boardColor === THEME.primary ? THEME.light : 
+                         boardColor === THEME.light ? THEME.lighter : 
+                         boardColor === THEME.lighter ? THEME.lightest :
+                         THEME.primary;
+                         
+    return (
+      <View key={`std-${index}`} style={styles.standardContainer}>
+        {/* Standard Header */}
+        <View style={[styles.standardHeader, { borderLeftColor: standardColor }]}>
+          <Text style={styles.standardTitle}>Standard {standardGroup.standard}</Text>
+          <View style={[styles.standardCounter, { backgroundColor: standardColor }]}>
+            <Text style={styles.standardCounterText}>{standardGroup.subjects.length}</Text>
+          </View>
+        </View>
+        
+        {/* Subjects within this standard */}
+        {standardGroup.subjects.map((subject, subIndex) => renderSubject(subject, standardColor, subIndex))}
+      </View>
+    );
+  };
+
+  const renderSubject = (subject, standardColor, index) => {
+    // Use an even lighter shade for subject cards
+    const subjectColor = standardColor === THEME.light ? THEME.lighter : 
+                       standardColor === THEME.lighter ? THEME.lightest :
+                       standardColor === THEME.lightest ? THEME.primary :
+                       THEME.light;
+                       
+    return (
+      <View key={`subject-${subject.id}`} style={[styles.subjectCard, { borderLeftColor: subjectColor }]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.subjectName}>{subject.subjectname}</Text>
+          <TouchableOpacity 
+            style={styles.infoIcon}
+            onPress={() => openSubjectActionModal(subject)}
+          >
+            <Icon name="more-vert" size={20} color={THEME.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Subject Management</Text>
+      <StatusBar backgroundColor={THEME.primary} barStyle="light-content" />
       
-      {/* Database Status */}
-      {dbStatus && (
-        <View style={[
-          styles.statusBar, 
-          dbStatus.success ? styles.statusSuccess : styles.statusError
-        ]}>
-          <Text style={styles.statusText}>
-            Database: {dbStatus.success ? 'Connected' : 'Error'} 
-            {dbStatus.totalSubjects !== undefined && ` | Subjects: ${dbStatus.totalSubjects}`}
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.headerContainer}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Subject Management</Text>
+        <Text style={styles.headerSubtitle}>Manage your course subjects</Text>
+      </View>
+      
+      {/* Action Buttons */}
+      <View style={styles.actionContainer}>
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => setModalVisible(true)}
         >
-          <Text style={styles.buttonText}>Add Subject</Text>
+          <Text style={styles.buttonText}>+ Add Subject</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -170,35 +412,67 @@ export default function AddSubject() {
           disabled={refreshing}
         >
           {refreshing ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={THEME.primary} size="small" />
           ) : (
-            <Text style={styles.buttonText}>Refresh</Text>
+            <Text style={styles.refreshButtonText}>↻ Refresh</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Subject List */}
-      <View style={styles.listContainer}>
-        <Text style={styles.subTitle}>
-          Subjects ({subjects.length})
-        </Text>
+      {/* Stats Card */}
+      <View style={styles.statsCard}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{subjects.length}</Text>
+          <Text style={styles.statLabel}>Total Subjects</Text>
+        </View>
         
-        <FlatList
-          data={subjects}
-          renderItem={renderItem}
-          keyExtractor={item => item.id.toString()}
-          refreshing={refreshing}
-          onRefresh={fetchSubjects}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No subjects found</Text>
-              <TouchableOpacity onPress={checkDatabase}>
-                <Text style={styles.debugText}>Tap to check database</Text>
-              </TouchableOpacity>
-            </View>
-          }
-        />
+        <View style={styles.statDivider} />
+        
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>
+            {[...new Set(subjects.map(s => s.standard))].length}
+          </Text>
+          <Text style={styles.statLabel}>Standards</Text>
+        </View>
+        
+        <View style={styles.statDivider} />
+        
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>
+            {[...new Set(subjects.map(s => s.board))].length}
+          </Text>
+          <Text style={styles.statLabel}>Boards</Text>
+        </View>
       </View>
+
+      {/* Subject List - Hierarchical Structure */}
+      <ScrollView 
+        style={styles.listContainer}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+      >
+        {nestedSubjects.length > 0 ? (
+          <>
+            {nestedSubjects.map((board, index) => renderBoard(board, index))}
+          </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Image 
+              source={{ uri: BOOK_ICON }} 
+              style={styles.emptyIcon} 
+              resizeMode="contain"
+            />
+            <Text style={styles.emptyText}>No subjects found</Text>
+            <TouchableOpacity 
+              style={styles.emptyButton}
+              onPress={() => setModalVisible(true)}
+            >
+              <Text style={styles.emptyButtonText}>Add Your First Subject</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
 
       {/* Add Subject Modal */}
       <Modal
@@ -212,7 +486,10 @@ export default function AddSubject() {
           style={styles.centeredView}
         >
           <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>Add New Subject</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Subject</Text>
+              <View style={styles.modalDivider} />
+            </View>
             
             <ScrollView style={styles.formContainer}>
               <Text style={styles.inputLabel}>Standard *</Text>
@@ -222,6 +499,7 @@ export default function AddSubject() {
                 keyboardType="numeric"
                 value={standard}
                 onChangeText={setStandard}
+                placeholderTextColor="#aaa"
               />
 
               <Text style={styles.inputLabel}>Subject Name *</Text>
@@ -230,6 +508,7 @@ export default function AddSubject() {
                 placeholder="e.g., Mathematics"
                 value={subjectName}
                 onChangeText={setSubjectName}
+                placeholderTextColor="#aaa"
               />
 
               <Text style={styles.inputLabel}>Board *</Text>
@@ -238,26 +517,150 @@ export default function AddSubject() {
                 placeholder="e.g., CBSE, ICSE"
                 value={board}
                 onChangeText={setBoard}
+                placeholderTextColor="#aaa"
               />
             </ScrollView>
 
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.closeButton]}
+                style={styles.cancelButton}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.closeButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[styles.modalButton, styles.submitButton]}
+                style={styles.submitButton}
                 onPress={handleSubmit}
                 disabled={loading}
               >
                 {loading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.submitButtonText}>Add</Text>
+                  <Text style={styles.submitButtonText}>Add Subject</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Subject Action Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={actionModalVisible}
+        onRequestClose={() => setActionModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.centeredView}
+          activeOpacity={1}
+          onPress={() => setActionModalVisible(false)}
+        >
+          <View 
+            style={styles.actionModalView}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={(e) => e.stopPropagation()}
+          >
+            <View style={styles.actionModalHeader}>
+              <Text style={styles.actionModalTitle}>
+                {selectedSubject ? selectedSubject.subjectname : 'Subject'}
+              </Text>
+              <Text style={styles.actionModalSubtitle}>
+                {selectedSubject ? `${selectedSubject.board} - Standard ${selectedSubject.standard}` : ''}
+              </Text>
+            </View>
+            
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={openEditModal}
+            >
+              <Icon name="edit" size={22} color={THEME.primary} style={styles.actionIcon} />
+              <Text style={styles.actionText}>Edit Subject</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={handleDeleteSubject}
+            >
+              <Icon name="delete" size={22} color={THEME.danger} style={styles.actionIcon} />
+              <Text style={[styles.actionText, { color: THEME.danger }]}>Delete Subject</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setActionModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Edit Subject Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.centeredView}
+        >
+          <View style={styles.modalView}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Subject</Text>
+              <View style={styles.modalDivider} />
+            </View>
+            
+            <ScrollView style={styles.formContainer}>
+              <Text style={styles.inputLabel}>Standard *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., 10"
+                keyboardType="numeric"
+                value={editStandard}
+                onChangeText={setEditStandard}
+                placeholderTextColor="#aaa"
+              />
+
+              <Text style={styles.inputLabel}>Subject Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Mathematics"
+                value={editSubjectName}
+                onChangeText={setEditSubjectName}
+                placeholderTextColor="#aaa"
+              />
+
+              <Text style={styles.inputLabel}>Board *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., CBSE, ICSE"
+                value={editBoard}
+                onChangeText={setEditBoard}
+                placeholderTextColor="#aaa"
+              />
+            </ScrollView>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleEditSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Update Subject</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -271,97 +674,270 @@ export default function AddSubject() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    padding: 20,
-    backgroundColor: '#fff'
+    backgroundColor: '#f8f9fa'
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: '700', 
-    marginBottom: 10,
-    color: '#333'
+  header: {
+    backgroundColor: THEME.primary,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  statusBar: {
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 15,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: THEME.text.light,
+    marginBottom: 4
   },
-  statusSuccess: {
-    backgroundColor: '#d4edda',
-    borderColor: '#c3e6cb',
-  },
-  statusError: {
-    backgroundColor: '#f8d7da',
-    borderColor: '#f5c6cb',
-  },
-  statusText: {
-    fontWeight: '600',
+  headerSubtitle: {
     fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  headerContainer: {
+  actionContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: -20,
     marginBottom: 20
   },
   addButton: {
-    backgroundColor: '#4c6ef5',
+    backgroundColor: 'white',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 30,
     flex: 1,
-    marginRight: 10
-  },
-  refreshButton: {
-    backgroundColor: '#28a745',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    width: 100,
-    alignItems: 'center'
+    marginRight: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
   },
   buttonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
+    color: THEME.primary,
+    fontWeight: '700',
+    fontSize: 15,
     textAlign: 'center'
   },
-  listContainer: {
-    flex: 1
+  refreshButton: {
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 30,
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 3,
   },
-  subTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 15,
-    color: '#333'
+  refreshButtonText: {
+    color: THEME.primary,
+    fontWeight: '700',
+    fontSize: 15
   },
-  subjectItem: {
-    backgroundColor: '#f8f9fa',
+  statsCard: {
+    backgroundColor: 'white',
+    margin: 20,
+    borderRadius: 12,
     padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.07,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginBottom: 4
+  },
+  statLabel: {
+    fontSize: 12,
+    color: THEME.text.muted
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: '#e9ecef',
+    marginHorizontal: 10
+  },
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 20
+  },
+  listContent: {
+    paddingBottom: 20
+  },
+  
+  // Board container and header
+  boardContainer: {
+    marginBottom: 16
+  },
+  boardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderLeftWidth: 8,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  boardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#212529',
+  },
+  boardCounter: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  boardCounterText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  
+  // Standard container and header
+  standardContainer: {
+    marginLeft: 15,
+    marginBottom: 12
+  },
+  standardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4c6ef5'
+    borderLeftWidth: 5,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  itemText: {
-    fontSize: 14,
-    marginBottom: 4,
-    color: '#333'
+  standardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#343a40',
   },
+  standardCounter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  standardCounterText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 11,
+  },
+  
+  // Subject card styles
+  subjectCard: {
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    marginLeft: 15,
+    borderLeftWidth: 3,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  subjectName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#343a40',
+    flex: 1,
+  },
+  infoIcon: {
+    padding: 5, 
+    borderRadius: 15,
+  },
+  
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 40
+    justifyContent: 'center',
+    padding: 50,
+    marginTop: 20
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+    opacity: 0.8
   },
   emptyText: {
     textAlign: 'center',
     fontSize: 16,
-    color: '#6c757d',
-    marginBottom: 8
+    color: THEME.text.muted,
+    marginBottom: 20
   },
-  debugText: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: '#4c6ef5',
-    textDecorationLine: 'underline'
+  emptyButton: {
+    backgroundColor: THEME.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30
   },
+  emptyButtonText: {
+    color: 'white',
+    fontWeight: '600'
+  },
+  
+  // Modal styles
   centeredView: {
     flex: 1,
     justifyContent: "center",
@@ -372,9 +948,8 @@ const styles = StyleSheet.create({
     width: '90%',
     maxHeight: '80%',
     backgroundColor: "white",
-    borderRadius: 12,
-    paddingVertical: 25,
-    paddingHorizontal: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -384,55 +959,130 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5
   },
+  modalHeader: {
+    paddingTop: 20,
+    paddingHorizontal: 20,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
-    marginBottom: 20,
+    marginBottom: 12,
     textAlign: "center",
-    color: '#333'
+    color: THEME.primary
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#e9ecef',
+    marginBottom: 16
   },
   formContainer: {
-    maxHeight: 400,
+    padding: 20,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
-    marginBottom: 6,
-    marginTop: 12,
-    color: '#333'
+    marginBottom: 8,
+    color: THEME.text.dark
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e9ecef',
     padding: 12,
-    borderRadius: 6,
+    borderRadius: 10,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f8f9fa',
+    marginBottom: 16,
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 25
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
   },
-  modalButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 6,
-    width: '48%',
-    alignItems: 'center'
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderRightWidth: 0.5,
+    borderRightColor: '#e9ecef',
   },
-  closeButton: {
-    backgroundColor: '#f1f3f5',
+  cancelButtonText: {
+    color: THEME.text.muted,
+    fontWeight: '600',
+    fontSize: 16
   },
   submitButton: {
-    backgroundColor: '#4c6ef5',
-  },
-  closeButtonText: {
-    color: '#495057',
-    fontWeight: '600'
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: THEME.primary,
+    borderLeftWidth: 0.5,
+    borderLeftColor: '#e9ecef',
   },
   submitButtonText: {
     color: 'white',
-    fontWeight: '600'
+    fontWeight: '600',
+    fontSize: 16
+  },
+
+  // Action Modal
+  actionModalView: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    width: '80%',
+    padding: 0,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    overflow: 'hidden'
+  },
+  actionModalHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  actionModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginBottom: 4
+  },
+  actionModalSubtitle: {
+    fontSize: 14,
+    color: '#6c757d',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  actionIcon: {
+    marginRight: 15,
+  },
+  actionText: {
+    fontSize: 16,
+    color: '#495057',
+  },
+  deleteButton: {
+    borderBottomWidth: 0,
+  },
+  closeButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa'
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6c757d'
   }
 });

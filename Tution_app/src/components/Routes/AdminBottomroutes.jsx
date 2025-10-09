@@ -45,15 +45,14 @@ const tabs = [
 export default function AdminBottomRoutes() {
   const [activeTab, setActiveTab] = useState('AssignFaculty');
 
-  // Render the currently active component
   const renderComponent = () => {
     const tab = tabs.find(tab => tab.name === activeTab);
     const Component = tab.component;
     return (
       <View style={{flex: 1}}>
-        <View style={styles.header}>
+        {/* <View style={styles.header}>
           <Text style={styles.headerTitle}>{tab.title}</Text>
-        </View>
+        </View> */}
         <Component />
       </View>
     );

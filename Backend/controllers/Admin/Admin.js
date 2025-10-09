@@ -166,6 +166,92 @@ const AdminController = {
                 error: error.message 
             });
         }
+    },
+
+    /**
+     * Update an existing subject
+     * @route PUT /admin/updateSubject/:id
+     */
+    updateSubject: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { standard, subjectname, board } = req.body;
+
+            // Validate input
+            if (!standard || !subjectname || !board) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'All fields are required'
+                });
+            }
+
+            if (isNaN(standard) || standard <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Standard must be a positive number'
+                });
+            }
+
+            // Update subject in database
+            const [result] = await db.promise().query(
+                'UPDATE subject SET standard = ?, subjectname = ?, board = ? WHERE id = ?',
+                [standard, subjectname, board, id]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Subject not found'
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: 'Subject updated successfully'
+            });
+        } catch (error) {
+            console.error('Error updating subject:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to update subject',
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * Delete a subject
+     * @route DELETE /admin/deleteSubject/:id
+     */
+    deleteSubject: async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            // Delete subject from database
+            const [result] = await db.promise().query(
+                'DELETE FROM subject WHERE id = ?',
+                [id]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Subject not found'
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: 'Subject deleted successfully'
+            });
+        } catch (error) {
+            console.error('Error deleting subject:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to delete subject',
+                error: error.message
+            });
+        }
     }
 };
 
