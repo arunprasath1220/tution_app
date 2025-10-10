@@ -172,7 +172,7 @@ export default function AddSubject() {
       
       console.log('📤 Adding subject:', subjectData);
       
-      const response = await fetch(`${API_URL}/admin/subjects`, {
+      const response = await fetch(`${API_URL}/admin/addsubjects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
