@@ -519,7 +519,10 @@ export default function FacultyList() {
   const renderSubjectForm = (form, index) => (
     <View key={index} style={styles.subjectFormContainer}>
       <View style={styles.subjectFormHeader}>
-        <Text style={styles.subjectFormTitle}>Subject {index + 1}</Text>
+        <View style={styles.subjectFormTitleContainer}>
+          <Icon name="book" size={18} color={THEME.primary} style={{ marginRight: 8 }} />
+          <Text style={styles.subjectFormTitle}>Subject {index + 1}</Text>
+        </View>
         {index > 0 && (
           <TouchableOpacity 
             onPress={() => removeSubjectForm(index)}
@@ -530,40 +533,49 @@ export default function FacultyList() {
         )}
       </View>
       
-      <Text style={styles.inputLabel}>Standard *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., 11, 12"
-        value={form.standard}
-        onChangeText={(text) => updateSubjectForm(index, 'standard', text)}
-        keyboardType="numeric"
-        placeholderTextColor="#aaa"
-      />
+      <View style={styles.formFieldContainer}>
+        <Text style={styles.inputLabel}>Standard *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., 11, 12"
+          value={form.standard}
+          onChangeText={(text) => updateSubjectForm(index, 'standard', text)}
+          keyboardType="numeric"
+          placeholderTextColor="#aaa"
+        />
+      </View>
       
-      <Text style={styles.inputLabel}>Subject *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., Math, Physics"
-        value={form.subject}
-        onChangeText={(text) => updateSubjectForm(index, 'subject', text)}
-        placeholderTextColor="#aaa"
-      />
+      <View style={styles.formFieldContainer}>
+        <Text style={styles.inputLabel}>Subject *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Math, Physics"
+          value={form.subject}
+          onChangeText={(text) => updateSubjectForm(index, 'subject', text)}
+          placeholderTextColor="#aaa"
+        />
+      </View>
       
-      <Text style={styles.inputLabel}>Board *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., CBSE, ICSE"
-        value={form.board}
-        onChangeText={(text) => updateSubjectForm(index, 'board', text)}
-        placeholderTextColor="#aaa"
-      />
+      <View style={styles.formFieldContainer}>
+        <Text style={styles.inputLabel}>Board *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., CBSE, ICSE"
+          value={form.board}
+          onChangeText={(text) => updateSubjectForm(index, 'board', text)}
+          placeholderTextColor="#aaa"
+        />
+      </View>
     </View>
   );
 
   const renderEditSubjectForm = (form, index) => (
     <View key={index} style={styles.subjectFormContainer}>
       <View style={styles.subjectFormHeader}>
-        <Text style={styles.subjectFormTitle}>Subject {index + 1}</Text>
+        <View style={styles.subjectFormTitleContainer}>
+          <Icon name="book" size={18} color={THEME.primary} style={{ marginRight: 8 }} />
+          <Text style={styles.subjectFormTitle}>Subject {index + 1}</Text>
+        </View>
         {index > 0 && (
           <TouchableOpacity 
             onPress={() => removeEditSubjectForm(index)}
@@ -574,33 +586,39 @@ export default function FacultyList() {
         )}
       </View>
       
-      <Text style={styles.inputLabel}>Standard *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., 11, 12"
-        value={form.standard}
-        onChangeText={(text) => updateEditSubjectForm(index, 'standard', text)}
-        keyboardType="numeric"
-        placeholderTextColor="#aaa"
-      />
+      <View style={styles.formFieldContainer}>
+        <Text style={styles.inputLabel}>Standard *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., 11, 12"
+          value={form.standard}
+          onChangeText={(text) => updateEditSubjectForm(index, 'standard', text)}
+          keyboardType="numeric"
+          placeholderTextColor="#aaa"
+        />
+      </View>
       
-      <Text style={styles.inputLabel}>Subject *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., Math, Physics"
-        value={form.subject}
-        onChangeText={(text) => updateEditSubjectForm(index, 'subject', text)}
-        placeholderTextColor="#aaa"
-      />
+      <View style={styles.formFieldContainer}>
+        <Text style={styles.inputLabel}>Subject *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Math, Physics"
+          value={form.subject}
+          onChangeText={(text) => updateEditSubjectForm(index, 'subject', text)}
+          placeholderTextColor="#aaa"
+        />
+      </View>
       
-      <Text style={styles.inputLabel}>Board *</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., CBSE, ICSE"
-        value={form.board}
-        onChangeText={(text) => updateEditSubjectForm(index, 'board', text)}
-        placeholderTextColor="#aaa"
-      />
+      <View style={styles.formFieldContainer}>
+        <Text style={styles.inputLabel}>Board *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., CBSE, ICSE"
+          value={form.board}
+          onChangeText={(text) => updateEditSubjectForm(index, 'board', text)}
+          placeholderTextColor="#aaa"
+        />
+      </View>
     </View>
   );
 
@@ -686,6 +704,16 @@ export default function FacultyList() {
         <View style={styles.studentSearchInfo}>
           <Text style={styles.studentSearchName}>{item.name}</Text>
           <Text style={styles.studentSearchEmail}>{item.email}</Text>
+          
+          {item.board && item.standard && (
+            <View style={styles.studentDetailsRow}>
+              <View style={styles.studentDetailsChip}>
+                <Text style={styles.studentDetailsText}>
+                  {item.board} • Class {item.standard}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
         
         {isAlreadyMapped ? (
@@ -706,6 +734,14 @@ export default function FacultyList() {
       <View style={styles.mappedStudentInfo}>
         <Text style={styles.mappedStudentName}>{item.name}</Text>
         <Text style={styles.mappedStudentEmail}>{item.email}</Text>
+        
+        {item.board && item.standard && (
+          <View style={styles.studentDetailsChip}>
+            <Text style={styles.studentDetailsText}>
+              {item.board} • Class {item.standard}
+            </Text>
+          </View>
+        )}
       </View>
       
       <TouchableOpacity
@@ -759,87 +795,110 @@ export default function FacultyList() {
         />
       </View>
       
-      {/* Add Faculty Modal */}
+      {/* Add Faculty Modal - Full Screen */}
       <Modal
         animationType="slide"
-        transparent={true}
+        transparent={false}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.centeredView}
-        >
-          <View style={styles.modalView}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Faculty</Text>
-              <View style={styles.modalDivider} />
+        <View style={styles.fullScreenModalContainer}>
+          <View style={styles.fullScreenModalHeader}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Icon name="arrow-back" size={24} color={THEME.text.light} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.fullScreenModalTitle}>Add New Faculty</Text>
             </View>
-            
-            <ScrollView style={styles.formContainer}>
-              <Text style={styles.sectionTitle}>Faculty Information</Text>
-              
-              <Text style={styles.inputLabel}>Faculty Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter faculty's full name"
-                value={name}
-                onChangeText={setName}
-                placeholderTextColor="#aaa"
-              />
+            <View style={styles.headerSpacer} />
+          </View>
+          
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+          >
+            <ScrollView 
+              style={styles.fullScreenScrollView} 
+              contentContainerStyle={styles.fullScreenScrollViewContent}
+            >
+              <View style={styles.fullScreenFormSection}>
+                <Text style={styles.fullScreenSectionTitle}>Faculty Information</Text>
+                
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Faculty Name *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter faculty's full name"
+                    value={name}
+                    onChangeText={setName}
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
 
-              <Text style={styles.inputLabel}>Email *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter faculty's email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholderTextColor="#aaa"
-              />
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Email *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter faculty's email"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+              </View>
               
               <View style={styles.divider} />
               
-              <View style={styles.sectionHeaderContainer}>
-                <Text style={styles.sectionTitle}>Subject Details</Text>
-                <TouchableOpacity 
-                  style={styles.addSubjectButton}
-                  onPress={addSubjectForm}
-                >
-                  <Icon name="add-circle" size={24} color={THEME.primary} />
-                </TouchableOpacity>
+              <View style={styles.fullScreenFormSection}>
+                <View style={styles.sectionHeaderContainer}>
+                  <Text style={styles.fullScreenSectionTitle}>Subject Details</Text>
+                  <TouchableOpacity 
+                    style={styles.addSubjectButton}
+                    onPress={addSubjectForm}
+                  >
+                    <Icon name="add-circle" size={24} color={THEME.primary} />
+                  </TouchableOpacity>
+                </View>
+                
+                {subjectForms.map((form, index) => renderSubjectForm(form, index))}
+                
+                <Text style={styles.noteText}>
+                  Note: Default password will be set to '123'
+                </Text>
               </View>
               
-              {subjectForms.map((form, index) => renderSubjectForm(form, index))}
-              
-              <Text style={styles.noteText}>
-                Note: Default password will be set to '123'
-              </Text>
+              {/* Extra padding to ensure content isn't hidden behind the fixed bottom bar */}
+              <View style={{ height: 80 }} />
             </ScrollView>
+          </KeyboardAvoidingView>
 
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Add Faculty</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+          <View style={styles.fixedBottomBar}>
+            <TouchableOpacity
+              style={styles.fixedCancelButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.fixedSubmitButton}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitButtonText}>Add Faculty</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       {/* Faculty Action Modal */}
@@ -905,218 +964,243 @@ export default function FacultyList() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Edit Faculty Modal */}
+      {/* Edit Faculty Modal - Full Screen */}
       <Modal
         animationType="slide"
-        transparent={true}
+        transparent={false}
         visible={editModalVisible}
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.centeredView}
-        >
-          <View style={styles.modalView}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Faculty</Text>
-              <View style={styles.modalDivider} />
+        <View style={styles.fullScreenModalContainer}>
+          <View style={styles.fullScreenModalHeader}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => setEditModalVisible(false)}
+            >
+              <Icon name="arrow-back" size={24} color={THEME.text.light} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.fullScreenModalTitle}>Edit Faculty</Text>
+              <Text style={styles.fullScreenModalSubtitle}>
+                {editName}
+              </Text>
             </View>
-            
-            <ScrollView style={styles.formContainer}>
-              <Text style={styles.sectionTitle}>Faculty Information</Text>
-              
-              <Text style={styles.inputLabel}>Faculty Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter faculty's full name"
-                value={editName}
-                onChangeText={setEditName}
-                placeholderTextColor="#aaa"
-              />
+            <View style={styles.headerSpacer} />
+          </View>
+          
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+          >
+            <ScrollView 
+              style={styles.fullScreenScrollView} 
+              contentContainerStyle={styles.fullScreenScrollViewContent}
+            >
+              <View style={styles.fullScreenFormSection}>
+                <Text style={styles.fullScreenSectionTitle}>Faculty Information</Text>
+                
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Faculty Name *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter faculty's full name"
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
 
-              <Text style={styles.inputLabel}>Email *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter faculty's email"
-                value={editEmail}
-                onChangeText={setEditEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholderTextColor="#aaa"
-              />
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Email *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter faculty's email"
+                    value={editEmail}
+                    onChangeText={setEditEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+              </View>
               
               <View style={styles.divider} />
               
-              <View style={styles.sectionHeaderContainer}>
-                <Text style={styles.sectionTitle}>Subject Details</Text>
-                <TouchableOpacity 
-                  style={styles.addSubjectButton}
-                  onPress={addEditSubjectForm}
-                >
-                  <Icon name="add-circle" size={24} color={THEME.primary} />
-                </TouchableOpacity>
+              <View style={styles.fullScreenFormSection}>
+                <View style={styles.sectionHeaderContainer}>
+                  <Text style={styles.fullScreenSectionTitle}>Subject Details</Text>
+                  <TouchableOpacity 
+                    style={styles.addSubjectButton}
+                    onPress={addEditSubjectForm}
+                  >
+                    <Icon name="add-circle" size={24} color={THEME.primary} />
+                  </TouchableOpacity>
+                </View>
+                
+                {editSubjectForms.map((form, index) => renderEditSubjectForm(form, index))}
               </View>
               
-              {editSubjectForms.map((form, index) => renderEditSubjectForm(form, index))}
+              {/* Extra padding to ensure content isn't hidden behind the fixed bottom bar */}
+              <View style={{ height: 80 }} />
             </ScrollView>
+          </KeyboardAvoidingView>
 
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setEditModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleEditSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Update</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+          <View style={styles.fixedBottomBar}>
+            <TouchableOpacity
+              style={styles.fixedCancelButton}
+              onPress={() => setEditModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.fixedSubmitButton}
+              onPress={handleEditSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitButtonText}>Update</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
-      {/* Student Mapping Modal */}
+      {/* Student Mapping Modal - Full Screen */}
       <Modal
         animationType="slide"
-        transparent={true}
+        transparent={false}
         visible={studentMapModalVisible}
         onRequestClose={() => setStudentMapModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.centeredView}
-        >
-          <View style={styles.modalView}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Map Students to Faculty</Text>
-              <Text style={styles.modalSubtitle}>
+        <View style={styles.fullScreenModalContainer}>
+          <View style={styles.fullScreenModalHeader}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => setStudentMapModalVisible(false)}
+            >
+              <Icon name="arrow-back" size={24} color={THEME.text.light} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.fullScreenModalTitle}>Map Students to Faculty</Text>
+              <Text style={styles.fullScreenModalSubtitle}>
                 {selectedFaculty ? selectedFaculty.name : ''}
               </Text>
-              <View style={styles.modalDivider} />
             </View>
-            
-            <View style={styles.tabContainer}>
-              {/* Tabs for search and mapped students */}
-              <View style={styles.tabs}>
+            <View style={styles.headerSpacer} />
+          </View>
+          
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Icon name="search" size={20} color="#6c757d" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search students by name or email..."
+                placeholderTextColor="#adb5bd"
+                value={searchStudentQuery}
+                onChangeText={setSearchStudentQuery}
+                autoCapitalize="none"
+              />
+              {searchStudentQuery.length > 0 && (
                 <TouchableOpacity 
-                  style={styles.tab}
-                  onPress={() => {}}
+                  onPress={() => setSearchStudentQuery('')} 
+                  style={styles.clearButton}
                 >
-                  <Text style={styles.tabText}>Map New Students</Text>
+                  <Icon name="clear" size={18} color="#6c757d" />
                 </TouchableOpacity>
-              </View>
-            </View>
-            
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputContainer}>
-                <Icon name="search" size={20} color="#6c757d" style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search students by name or email..."
-                  placeholderTextColor="#adb5bd"
-                  value={searchStudentQuery}
-                  onChangeText={setSearchStudentQuery}
-                  autoCapitalize="none"
-                />
-                {searchStudentQuery.length > 0 && (
-                  <TouchableOpacity 
-                    onPress={() => setSearchStudentQuery('')} 
-                    style={styles.clearButton}
-                  >
-                    <Icon name="clear" size={18} color="#6c757d" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-            
-            <ScrollView style={styles.mappingFormContainer}>
-              <View style={styles.sectionContainer}>
-                <Text style={styles.mappingSectionTitle}>
-                  Currently Mapped Students 
-                  {mappedStudents.length > 0 ? ` (${mappedStudents.length})` : ''}
-                </Text>
-                
-                {loading ? (
-                  <ActivityIndicator size="small" color={THEME.primary} style={styles.loadingIndicator} />
-                ) : mappedStudents.length > 0 ? (
-                  <FlatList
-                    data={mappedStudents}
-                    renderItem={renderMappedStudentItem}
-                    keyExtractor={item => item.id.toString()}
-                    scrollEnabled={false}
-                  />
-                ) : (
-                  <Text style={styles.noMappingsText}>No students mapped to this faculty yet.</Text>
-                )}
-              </View>
-              
-              <View style={styles.divider} />
-              
-              <View style={styles.sectionContainer}>
-                <Text style={styles.mappingSectionTitle}>Select Students to Map</Text>
-                <Text style={styles.mappingSectionSubtitle}>
-                  Select students from the list below to map them to this faculty.
-                </Text>
-                
-                {studentSearchLoading ? (
-                  <ActivityIndicator size="small" color={THEME.primary} style={styles.loadingIndicator} />
-                ) : searchStudentQuery.trim() === '' ? (
-                  <Text style={styles.searchPromptText}>Start typing to search for students...</Text>
-                ) : filteredStudents.length > 0 ? (
-                  <FlatList
-                    data={filteredStudents}
-                    renderItem={renderStudentItem}
-                    keyExtractor={item => item.id.toString()}
-                    scrollEnabled={false}
-                  />
-                ) : (
-                  <Text style={styles.noResultsText}>No students found matching your search.</Text>
-                )}
-              </View>
-              
-              {selectedStudents.length > 0 && (
-                <View style={styles.selectedCountContainer}>
-                  <Text style={styles.selectedCountText}>
-                    {selectedStudents.length} {selectedStudents.length === 1 ? 'student' : 'students'} selected
-                  </Text>
-                </View>
               )}
-            </ScrollView>
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setStudentMapModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  selectedStudents.length === 0 && styles.disabledButton
-                ]}
-                onPress={mapStudentsToFaculty}
-                disabled={selectedStudents.length === 0 || loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Map Selected Students</Text>
-                )}
-              </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+          
+          <ScrollView 
+            style={styles.fullScreenScrollView} 
+            contentContainerStyle={styles.fullScreenScrollViewContent}
+          >
+            <View style={styles.sectionContainer}>
+              <Text style={styles.mappingSectionTitle}>
+                Currently Mapped Students 
+                {mappedStudents.length > 0 ? ` (${mappedStudents.length})` : ''}
+              </Text>
+              
+              {loading ? (
+                <ActivityIndicator size="small" color={THEME.primary} style={styles.loadingIndicator} />
+              ) : mappedStudents.length > 0 ? (
+                <FlatList
+                  data={mappedStudents}
+                  renderItem={renderMappedStudentItem}
+                  keyExtractor={item => item.id.toString()}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={true}
+                />
+              ) : (
+                <Text style={styles.noMappingsText}>No students mapped to this faculty yet.</Text>
+              )}
+            </View>
+            
+            <View style={styles.divider} />
+            
+            <View style={styles.sectionContainer}>
+              <Text style={styles.mappingSectionTitle}>Select Students to Map</Text>
+              <Text style={styles.mappingSectionSubtitle}>
+                Select students from the list below to map them to this faculty.
+              </Text>
+              
+              {studentSearchLoading ? (
+                <ActivityIndicator size="small" color={THEME.primary} style={styles.loadingIndicator} />
+              ) : searchStudentQuery.trim() === '' ? (
+                <Text style={styles.searchPromptText}>Start typing to search for students...</Text>
+              ) : filteredStudents.length > 0 ? (
+                <FlatList
+                  data={filteredStudents}
+                  renderItem={renderStudentItem}
+                  keyExtractor={item => item.id.toString()}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={true}
+                />
+              ) : (
+                <Text style={styles.noResultsText}>No students found matching your search.</Text>
+              )}
+            </View>
+            
+            {selectedStudents.length > 0 && (
+              <View style={styles.selectedCountContainer}>
+                <Text style={styles.selectedCountText}>
+                  {selectedStudents.length} {selectedStudents.length === 1 ? 'student' : 'students'} selected
+                </Text>
+              </View>
+            )}
+            
+            {/* Extra padding to ensure content isn't hidden behind the fixed bottom bar */}
+            <View style={{ height: 80 }} />
+          </ScrollView>
+
+          <View style={styles.fixedBottomBar}>
+            <TouchableOpacity
+              style={styles.fixedCancelButton}
+              onPress={() => setStudentMapModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.fixedSubmitButton,
+                selectedStudents.length === 0 && styles.disabledButton
+              ]}
+              onPress={mapStudentsToFaculty}
+              disabled={selectedStudents.length === 0 || loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitButtonText}>Map Selected Students</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -1133,6 +1217,86 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
+  },
+  // Full screen modal styles
+  fullScreenModalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  fullScreenModalHeader: {
+    backgroundColor: THEME.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 3,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerSpacer: {
+    width: 40, // Balance the header layout
+  },
+  fullScreenModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.text.light,
+    textAlign: 'center',
+  },
+  fullScreenModalSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  fullScreenScrollView: {
+    flex: 1,
+  },
+  fullScreenScrollViewContent: {
+    padding: 20,
+  },
+  fullScreenFormSection: {
+    marginBottom: 16,
+  },
+  fullScreenSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginBottom: 16,
+  },
+  formFieldContainer: {
+    marginBottom: 12,
+  },
+  subjectFormTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fixedBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+    backgroundColor: '#ffffff',
+    elevation: 8,
+  },
+  fixedCancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderRightWidth: 0.5,
+    borderRightColor: '#e9ecef',
+    backgroundColor: '#ffffff',
+  },
+  fixedSubmitButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: THEME.primary,
+    borderLeftWidth: 0.5,
+    borderLeftColor: '#e9ecef',
   },
   headerTitle: {
     fontSize: 24,
@@ -1394,15 +1558,26 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: '#e9ecef',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 1.5,
+    elevation: 1,
   },
   subjectFormHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
   },
   subjectFormTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: THEME.primary,
   },
@@ -1413,7 +1588,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
-    color: '#495057'
+    color: '#495057',
+    marginLeft: 2,
   },
   input: {
     borderWidth: 1,
@@ -1422,7 +1598,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     fontSize: 16,
     backgroundColor: '#fff',
-    marginBottom: 16,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
   },
   divider: {
     height: 1,
@@ -1686,8 +1870,28 @@ const styles = StyleSheet.create({
   mappedStudentEmail: {
     fontSize: 13,
     color: '#6c757d',
+    marginBottom: 4,
   },
   removeMappingButton: {
     padding: 8,
+  },
+  studentDetailsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  studentDetailsChip: {
+    backgroundColor: THEME.lighter + '20',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    marginTop: 2,
+    borderWidth: 1,
+    borderColor: THEME.lighter + '40',
+    alignSelf: 'flex-start',
+  },
+  studentDetailsText: {
+    fontSize: 11,
+    color: THEME.primary,
   },
 });

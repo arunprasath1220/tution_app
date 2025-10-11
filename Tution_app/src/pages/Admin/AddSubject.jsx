@@ -474,75 +474,107 @@ export default function AddSubject() {
         )}
       </ScrollView>
 
-      {/* Add Subject Modal */}
+      {/* Add Subject Modal - Full Screen */}
       <Modal
         animationType="slide"
-        transparent={true}
+        transparent={false}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.centeredView}
-        >
-          <View style={styles.modalView}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Subject</Text>
-              <View style={styles.modalDivider} />
+        <View style={styles.fullScreenModalContainer}>
+          <View style={styles.fullScreenModalHeader}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Icon name="arrow-back" size={24} color={THEME.text.light} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.fullScreenModalTitle}>Add New Subject</Text>
             </View>
-            
-            <ScrollView style={styles.formContainer}>
-              <Text style={styles.inputLabel}>Standard *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 10"
-                keyboardType="numeric"
-                value={standard}
-                onChangeText={setStandard}
-                placeholderTextColor="#aaa"
-              />
-
-              <Text style={styles.inputLabel}>Subject Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Mathematics"
-                value={subjectName}
-                onChangeText={setSubjectName}
-                placeholderTextColor="#aaa"
-              />
-
-              <Text style={styles.inputLabel}>Board *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., CBSE, ICSE"
-                value={board}
-                onChangeText={setBoard}
-                placeholderTextColor="#aaa"
-              />
-            </ScrollView>
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Add Subject</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <View style={styles.headerSpacer} />
           </View>
-        </KeyboardAvoidingView>
+          
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+          >
+            <ScrollView 
+              style={styles.fullScreenScrollView} 
+              contentContainerStyle={styles.fullScreenScrollViewContent}
+            >
+              <View style={styles.fullScreenFormSection}>
+                <Text style={styles.fullScreenSectionTitle}>Subject Details</Text>
+                
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Standard *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., 10"
+                    keyboardType="numeric"
+                    value={standard}
+                    onChangeText={setStandard}
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Subject Name *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., Mathematics"
+                    value={subjectName}
+                    onChangeText={setSubjectName}
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Board *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., CBSE, ICSE"
+                    value={board}
+                    onChangeText={setBoard}
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+                
+                <View style={styles.infoContainer}>
+                  <Icon name="info-outline" size={18} color={THEME.light} style={styles.infoIcon} />
+                  <Text style={styles.infoText}>
+                    Subjects are used to organize courses by standard and board. Students will be assigned to subjects.
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Extra padding to ensure content isn't hidden behind the fixed bottom bar */}
+              <View style={{ height: 80 }} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+
+          <View style={styles.fixedBottomBar}>
+            <TouchableOpacity
+              style={styles.fixedCancelButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.fixedSubmitButton}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitButtonText}>Add Subject</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* Subject Action Modal */}
@@ -597,75 +629,110 @@ export default function AddSubject() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Edit Subject Modal */}
+      {/* Edit Subject Modal - Full Screen */}
       <Modal
         animationType="slide"
-        transparent={true}
+        transparent={false}
         visible={editModalVisible}
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.centeredView}
-        >
-          <View style={styles.modalView}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Subject</Text>
-              <View style={styles.modalDivider} />
+        <View style={styles.fullScreenModalContainer}>
+          <View style={styles.fullScreenModalHeader}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => setEditModalVisible(false)}
+            >
+              <Icon name="arrow-back" size={24} color={THEME.text.light} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.fullScreenModalTitle}>Edit Subject</Text>
+              <Text style={styles.fullScreenModalSubtitle}>
+                {editSubjectName}
+              </Text>
             </View>
-            
-            <ScrollView style={styles.formContainer}>
-              <Text style={styles.inputLabel}>Standard *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 10"
-                keyboardType="numeric"
-                value={editStandard}
-                onChangeText={setEditStandard}
-                placeholderTextColor="#aaa"
-              />
-
-              <Text style={styles.inputLabel}>Subject Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Mathematics"
-                value={editSubjectName}
-                onChangeText={setEditSubjectName}
-                placeholderTextColor="#aaa"
-              />
-
-              <Text style={styles.inputLabel}>Board *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., CBSE, ICSE"
-                value={editBoard}
-                onChangeText={setEditBoard}
-                placeholderTextColor="#aaa"
-              />
-            </ScrollView>
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setEditModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleEditSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Update Subject</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <View style={styles.headerSpacer} />
           </View>
-        </KeyboardAvoidingView>
+          
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+          >
+            <ScrollView 
+              style={styles.fullScreenScrollView} 
+              contentContainerStyle={styles.fullScreenScrollViewContent}
+            >
+              <View style={styles.fullScreenFormSection}>
+                <Text style={styles.fullScreenSectionTitle}>Subject Details</Text>
+                
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Standard *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., 10"
+                    keyboardType="numeric"
+                    value={editStandard}
+                    onChangeText={setEditStandard}
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Subject Name *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., Mathematics"
+                    value={editSubjectName}
+                    onChangeText={setEditSubjectName}
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+
+                <View style={styles.formFieldContainer}>
+                  <Text style={styles.inputLabel}>Board *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., CBSE, ICSE"
+                    value={editBoard}
+                    onChangeText={setEditBoard}
+                    placeholderTextColor="#aaa"
+                  />
+                </View>
+                
+                <View style={styles.infoContainer}>
+                  <Icon name="info-outline" size={18} color={THEME.light} style={styles.infoIcon} />
+                  <Text style={styles.infoText}>
+                    Changing the details will affect all students assigned to this subject.
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Extra padding to ensure content isn't hidden behind the fixed bottom bar */}
+              <View style={{ height: 80 }} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+
+          <View style={styles.fixedBottomBar}>
+            <TouchableOpacity
+              style={styles.fixedCancelButton}
+              onPress={() => setEditModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.fixedSubmitButton}
+              onPress={handleEditSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitButtonText}>Update Subject</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -690,6 +757,101 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  // Full screen modal styles
+  fullScreenModalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  fullScreenModalHeader: {
+    backgroundColor: THEME.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 3,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerSpacer: {
+    width: 40, // Balance the header layout
+  },
+  fullScreenModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.text.light,
+    textAlign: 'center',
+  },
+  fullScreenModalSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  fullScreenScrollView: {
+    flex: 1,
+  },
+  fullScreenScrollViewContent: {
+    padding: 20,
+  },
+  fullScreenFormSection: {
+    marginBottom: 16,
+  },
+  fullScreenSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginBottom: 16,
+  },
+  formFieldContainer: {
+    marginBottom: 16,
+  },
+  fixedBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+    backgroundColor: '#ffffff',
+    elevation: 8,
+  },
+  fixedCancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderRightWidth: 0.5,
+    borderRightColor: '#e9ecef',
+    backgroundColor: '#ffffff',
+  },
+  fixedSubmitButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: THEME.primary,
+    borderLeftWidth: 0.5,
+    borderLeftColor: '#e9ecef',
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    backgroundColor: THEME.lightest + '15',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.lightest,
+  },
+  infoIcon: {
+    marginRight: 8,
+    marginTop: 2,
+  },
+  infoText: {
+    color: THEME.text.dark,
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
   },
   headerTitle: {
     fontSize: 24,
@@ -982,7 +1144,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
-    color: THEME.text.dark
+    color: THEME.text.dark,
+    marginLeft: 2,
   },
   input: {
     borderWidth: 1,
@@ -990,8 +1153,16 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     fontSize: 16,
-    backgroundColor: '#f8f9fa',
-    marginBottom: 16,
+    backgroundColor: '#fff',
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
   },
   buttonContainer: {
     flexDirection: 'row',
