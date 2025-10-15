@@ -44,6 +44,11 @@ export default function FacultyList() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFaculty, setSelectedFaculty] = useState(null);
   
+  // For filtering faculty
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredFaculties, setFilteredFaculties] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
   // For mapping students to faculty
   const [searchStudentQuery, setSearchStudentQuery] = useState('');
   const [allStudents, setAllStudents] = useState([]);
@@ -66,6 +71,39 @@ export default function FacultyList() {
   useEffect(() => {
     fetchFaculties();
   }, []);
+  
+  // Apply filter whenever searchQuery or faculties list changes
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredFaculties(faculties);
+      setIsSearching(false);
+    } else {
+      setIsSearching(true);
+      const lowercasedQuery = searchQuery.toLowerCase();
+      
+      const filtered = faculties.filter(faculty => {
+        // Check faculty name and email
+        const nameMatch = faculty.name.toLowerCase().includes(lowercasedQuery);
+        const emailMatch = faculty.email.toLowerCase().includes(lowercasedQuery);
+        
+        // Check if any subject matches the query
+        const subjectMatch = faculty.subjects && faculty.subjects.some(subj => 
+          subj.subjectname.toLowerCase().includes(lowercasedQuery) || 
+          subj.board.toLowerCase().includes(lowercasedQuery) ||
+          subj.standard.toString().includes(lowercasedQuery)
+        );
+        
+        // Check if any student name matches
+        const studentMatch = faculty.students && faculty.students.some(student =>
+          student.name.toLowerCase().includes(lowercasedQuery)
+        );
+        
+        return nameMatch || emailMatch || subjectMatch || studentMatch;
+      });
+      
+      setFilteredFaculties(filtered);
+    }
+  }, [searchQuery, faculties]);
   
   // Filter students based on search query
   useEffect(() => {
@@ -97,6 +135,7 @@ export default function FacultyList() {
       
       if (data.success) {
         setFaculties(data.data || []);
+        setFilteredFaculties(data.data || []); // Initialize filtered list with all faculties
         console.log(`👨‍🏫 Loaded ${data.data?.length || 0} faculties`);
       } else {
         Alert.alert('Error', data.message || 'Failed to fetch faculties');
@@ -190,6 +229,11 @@ export default function FacultyList() {
   // Check if a student is already mapped to the faculty
   const isStudentAlreadyMapped = (studentId) => {
     return mappedStudents.some(s => s.id === studentId);
+  };
+
+  // Clear search query for faculty filter
+  const handleClearSearch = () => {
+    setSearchQuery('');
   };
 
   // Map selected students to faculty
@@ -755,45 +799,207 @@ export default function FacultyList() {
 
   return (
     <View style={styles.container}>
+      {/* Elegant Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Faculty Management</Text>
-        <Text style={styles.headerSubtitle}>View and manage faculty members</Text>
-      </View>
-      
-      <View style={styles.contentContainer}>
-        <View style={styles.actionContainer}>
+        <View style={styles.headerContent}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Faculty Management</Text>
+            <Text style={styles.headerSubtitle}>View and manage faculty members</Text>
+          </View>
           <TouchableOpacity 
-            style={styles.addButton}
+            style={styles.headerAddButton}
             onPress={() => setModalVisible(true)}
           >
-            <Icon name="person-add" size={18} color={THEME.text.light} />
-            <Text style={styles.buttonText}>Add Faculty</Text>
+            <Icon name="person-add" size={28} color={THEME.text.light} />
           </TouchableOpacity>
-          
-          <Text style={styles.countText}>
-            {faculties.length} Faculty Members
-          </Text>
         </View>
-        
-        <FlatList
-          data={faculties}
-          renderItem={renderFacultyItem}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshing={refreshing}
-          onRefresh={fetchFaculties}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Icon name="school" size={60} color={THEME.lightest} />
-              <Text style={styles.emptyText}>No faculty members found</Text>
-              <Text style={styles.emptySubText}>
-                Add faculty members by clicking the button above
-              </Text>
-            </View>
-          }
-        />
       </View>
+      
+      {/* Faculty List */}
+      <ScrollView 
+        style={styles.listContainer}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={fetchFaculties}
+      >
+        {/* Quick Stats Dashboard */}
+        <View style={styles.statsDashboard}>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, styles.statCard1]}>
+              <Icon name="school" size={20} color={THEME.primary} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>{faculties.length}</Text>
+                <Text style={styles.statLabel}>Faculty</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.statCard2]}>
+              <Icon name="book" size={20} color={THEME.light} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>
+                  {faculties.reduce((sum, f) => sum + (f.subjects?.length || 0), 0)}
+                </Text>
+                <Text style={styles.statLabel}>Subjects</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.statCard3]}>
+              <Icon name="groups" size={20} color={THEME.lighter} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>
+                  {faculties.reduce((sum, f) => sum + (f.students?.length || 0), 0)}
+                </Text>
+                <Text style={styles.statLabel}>Students</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#7f8c8d" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, email, subject, student..."
+            placeholderTextColor="#adb5bd"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
+              <Icon name="clear" size={18} color="#7f8c8d" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Faculty Cards */}
+        {filteredFaculties.length > 0 ? (
+          <View style={styles.facultyWrapper}>
+            <View style={styles.sectionHeaderContainer}>
+              <Icon name="people" size={20} color={THEME.primary} />
+              <Text style={styles.sectionHeaderText}>All Faculty Members</Text>
+              <View style={styles.sectionHeaderLine} />
+            </View>
+            
+            {filteredFaculties.map((faculty) => (
+              <View key={faculty.id} style={styles.facultyCard}>
+                <View style={styles.facultyCardHeader}>
+                  <View style={styles.facultyMainInfo}>
+                    <View style={styles.facultyIconCircle}>
+                      <Icon name="person" size={24} color={THEME.primary} />
+                    </View>
+                    <View style={styles.facultyDetails}>
+                      <Text style={styles.facultyName}>{faculty.name}</Text>
+                      <Text style={styles.facultyEmail}>{faculty.email}</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.facultyActions}>
+                    <TouchableOpacity
+                      style={styles.actionIconButton}
+                      onPress={() => openStudentMapModal(faculty)}
+                    >
+                      <Icon name="person-add" size={20} color={THEME.success} />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.actionIconButton}
+                      onPress={() => openActionModal(faculty)}
+                    >
+                      <Icon name="more-vert" size={20} color={THEME.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                
+                {/* Subjects Section */}
+                {faculty.subjects && faculty.subjects.length > 0 ? (
+                  <View style={styles.facultySubjectsSection}>
+                    <View style={styles.sectionTitleRow}>
+                      <Icon name="book" size={16} color={THEME.primary} style={{ marginRight: 6 }} />
+                      <Text style={styles.subjectsSectionTitle}>
+                        Subjects ({faculty.subjects.length})
+                      </Text>
+                    </View>
+                    <View style={styles.subjectsChipContainer}>
+                      {faculty.subjects.map((subj, index) => (
+                        <View key={index} style={styles.modernSubjectChip}>
+                          <View style={styles.chipDot} />
+                          <Text style={styles.modernSubjectText}>
+                            {subj.subjectname}
+                          </Text>
+                          <View style={styles.chipDivider} />
+                          <Text style={styles.chipMetaText}>
+                            {subj.board} • Std {subj.standard}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.noDataSection}>
+                    <Icon name="book-outline" size={16} color="#adb5bd" />
+                    <Text style={styles.noDataText}>No subjects assigned yet</Text>
+                  </View>
+                )}
+                
+                {/* Students Section */}
+                {faculty.students && faculty.students.length > 0 && (
+                  <View style={styles.facultyStudentsSection}>
+                    <View style={styles.sectionTitleRow}>
+                      <Icon name="groups" size={16} color={THEME.success} style={{ marginRight: 6 }} />
+                      <Text style={styles.studentsSectionTitle}>
+                        Mapped Students ({faculty.students.length})
+                      </Text>
+                    </View>
+                    <View style={styles.studentsChipContainer}>
+                      {faculty.students.slice(0, 3).map((student, index) => (
+                        <View key={index} style={styles.modernStudentChip}>
+                          <Icon name="person" size={12} color={THEME.success} style={{ marginRight: 4 }} />
+                          <Text style={styles.modernStudentText}>{student.name}</Text>
+                        </View>
+                      ))}
+                      {faculty.students.length > 3 && (
+                        <TouchableOpacity 
+                          style={styles.moreChip}
+                          onPress={() => openStudentMapModal(faculty)}
+                        >
+                          <Text style={styles.moreChipText}>+{faculty.students.length - 3} more</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconCircle}>
+              <Icon name={isSearching ? "search-off" : "school"} size={60} color={THEME.lightest} />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {isSearching ? "No matching faculty found" : "No Faculty Members Yet"}
+            </Text>
+            <Text style={styles.emptyText}>
+              {isSearching 
+                ? "Try a different search term" 
+                : "Start by adding your first faculty member to get started"
+              }
+            </Text>
+            {!isSearching && (
+              <TouchableOpacity 
+                style={styles.emptyButton}
+                onPress={() => setModalVisible(true)}
+              >
+                <Icon name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.emptyButtonText}>Add First Faculty</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </ScrollView>
       
       {/* Add Faculty Modal - Full Screen */}
       <Modal
@@ -1093,11 +1299,11 @@ export default function FacultyList() {
             <View style={styles.headerSpacer} />
           </View>
           
-          <View style={styles.searchContainer}>
+          <View style={styles.studentSearchContainer}>
             <View style={styles.searchInputContainer}>
               <Icon name="search" size={20} color="#6c757d" style={styles.searchIcon} />
               <TextInput
-                style={styles.searchInput}
+                style={styles.studentSearchInput}
                 placeholder="Search students by name or email..."
                 placeholderTextColor="#adb5bd"
                 value={searchStudentQuery}
@@ -1215,8 +1421,393 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.primary,
     paddingVertical: 24,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerAddButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerAddButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: THEME.text.light,
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.85)',
+    letterSpacing: 0.3,
+  },
+  // List Container
+  listContainer: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+  // Stats Dashboard
+  statsDashboard: {
+    marginBottom: 20,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  statCard1: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.primary,
+  },
+  statCard2: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.light,
+  },
+  statCard3: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.lighter,
+  },
+  statTextContainer: {
+    marginLeft: 8,
+    alignItems: 'flex-start',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2d3436',
+    lineHeight: 20,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#636e72',
+    fontWeight: '600',
+  },
+  // Search Container (for main faculty list)
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#2d3436',
+  },
+  clearButton: {
+    padding: 8,
+  },
+  // Faculty Wrapper
+  facultyWrapper: {
+    marginTop: 10,
+  },
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginLeft: 8,
+    flex: 1,
+  },
+  sectionHeaderLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: THEME.lightest + '30',
+    marginLeft: 10,
+  },
+  // Faculty Card
+  facultyCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  facultyCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8f9fa',
+  },
+  facultyMainInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  facultyIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: THEME.lightest + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  facultyDetails: {
+    flex: 1,
+  },
+  facultyName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 4,
+  },
+  facultyEmail: {
+    fontSize: 14,
+    color: '#636e72',
+  },
+  facultyActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Subjects Section
+  facultySubjectsSection: {
+    padding: 16,
+    backgroundColor: '#fafbfc',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f1f3',
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  subjectsSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  subjectsChipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  modernSubjectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: THEME.lightest + '40',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  chipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: THEME.primary,
+    marginRight: 8,
+  },
+  modernSubjectText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.primary,
+  },
+  chipDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#e9ecef',
+    marginHorizontal: 8,
+  },
+  chipMetaText: {
+    fontSize: 11,
+    color: '#7f8c8d',
+  },
+  noDataSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  noDataText: {
+    fontSize: 13,
+    color: '#adb5bd',
+    fontStyle: 'italic',
+    marginLeft: 8,
+  },
+  // Students Section
+  facultyStudentsSection: {
+    padding: 16,
+  },
+  studentsSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.success,
+  },
+  studentsChipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  modernStudentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.success + '10',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: THEME.success + '30',
+  },
+  modernStudentText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.success,
+  },
+  moreChip: {
+    backgroundColor: '#e9ecef',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+  },
+  moreChipText: {
+    fontSize: 12,
+    color: '#6c757d',
+    fontWeight: '600',
+  },
+  // Empty State
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: THEME.lightest + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 15,
+    color: '#636e72',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: THEME.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  emptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   // Full screen modal styles
   fullScreenModalContainer: {
@@ -1298,180 +1889,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0.5,
     borderLeftColor: '#e9ecef',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: THEME.text.light,
-    marginBottom: 4
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  contentContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  actionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  addButton: {
-    backgroundColor: THEME.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  countText: {
-    color: '#666',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  facultyItem: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: THEME.lighter,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 2.22,
-    elevation: 2,
-  },
-  facultyInfo: {
-    flex: 1,
-  },
-  facultyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4
-  },
-  facultyName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  facultyEmail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoIconContainer: {
-    marginLeft: 8,
-  },
-  studentMapButton: {
-    padding: 4,
-    marginRight: 4
-  },
-  infoCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: THEME.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  subjectsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 5,
-  },
-  subjectChip: {
-    backgroundColor: THEME.lightest + '20',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    margin: 2,
-    borderWidth: 1,
-    borderColor: THEME.lightest + '40',
-  },
-  subjectText: {
-    fontSize: 12,
-    color: THEME.primary,
-  },
-  noSubjectsText: {
-    fontSize: 12,
-    fontStyle: 'italic',
-    color: '#999',
-    marginTop: 4,
-  },
-  studentSection: {
-    marginTop: 12,
-  },
-  studentSectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 6,
-  },
-  studentsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  studentChip: {
-    backgroundColor: THEME.success + '20',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    margin: 2,
-    borderWidth: 1,
-    borderColor: THEME.success + '40',
-  },
-  studentText: {
-    fontSize: 12,
-    color: THEME.success,
-  },
-  moreStudentsChip: {
-    backgroundColor: '#e9ecef',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    margin: 2,
-  },
-  moreStudentsText: {
-    fontSize: 12,
-    color: '#6c757d',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#6c757d',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: '#adb5bd',
-    textAlign: 'center',
-  },
+  // Modal Styles
   centeredView: {
     flex: 1,
     justifyContent: "center",
@@ -1731,7 +2149,8 @@ const styles = StyleSheet.create({
     color: THEME.primary,
     fontWeight: '600',
   },
-  searchContainer: {
+  // Student Mapping Search (in modal)
+  studentSearchContainer: {
     padding: 16,
     backgroundColor: '#f8f9fa',
   },
@@ -1744,17 +2163,11 @@ const styles = StyleSheet.create({
     borderColor: '#e9ecef',
     paddingHorizontal: 10,
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
+  studentSearchInput: {
     flex: 1,
     paddingVertical: 10,
     fontSize: 16,
     color: '#495057',
-  },
-  clearButton: {
-    padding: 8,
   },
   studentSearchItem: {
     flexDirection: 'row',

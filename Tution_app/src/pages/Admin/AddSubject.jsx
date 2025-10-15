@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  SafeAreaView,
 } from 'react-native';
 import { API_URL } from '../../utils/env';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -404,11 +405,15 @@ export default function AddSubject() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor={THEME.primary} barStyle="light-content" />
-      
-      {/* Elegant Header with Gradient Effect */}
-      <View style={styles.header}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar 
+        backgroundColor={THEME.primary}
+        translucent={false}
+        hidden={false}
+      />
+      <View style={styles.container}>
+        {/* Elegant Header with Gradient Effect */}
+        <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Subject Management</Text>
@@ -751,11 +756,16 @@ export default function AddSubject() {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: THEME.primary,
+  },
   container: { 
     flex: 1, 
     backgroundColor: '#f5f7fa'
