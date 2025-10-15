@@ -25,13 +25,40 @@ exports.getAllFacultiesWithSubjects = async (req, res) => {
     const facultiesWithData = await Promise.all(
       faculties.map(async (faculty) => {
         // Get subjects for this faculty
-        const [subjects] = await pool.promise().query(
-          `SELECT s.id, s.subjectname, s.standard, s.board 
-           FROM subject s 
-           INNER JOIN facultymap fm ON s.id = fm.subject_id 
-           WHERE fm.user_id = ? AND fm.subject_id IS NOT NULL`,
+        const [facultyMaps] = await pool.promise().query(
+          `SELECT subject_id FROM facultymap WHERE user_id = ? AND subject_id IS NOT NULL`,
           [faculty.id]
         );
+
+        let subjects = [];
+        if (facultyMaps.length > 0) {
+          // Parse the JSON array and get all subject IDs
+          const subjectIds = [];
+          facultyMaps.forEach(map => {
+            try {
+              const ids = JSON.parse(map.subject_id);
+              if (Array.isArray(ids)) {
+                subjectIds.push(...ids);
+              } else {
+                subjectIds.push(ids);
+              }
+            } catch (e) {
+              // If not JSON, treat as single ID
+              subjectIds.push(map.subject_id);
+            }
+          });
+
+          if (subjectIds.length > 0) {
+            const placeholders = subjectIds.map(() => '?').join(',');
+            const [subjectResults] = await pool.promise().query(
+              `SELECT id, subjectname, standard, board 
+               FROM subject 
+               WHERE id IN (${placeholders})`,
+              subjectIds
+            );
+            subjects = subjectResults;
+          }
+        }
 
         // Get students for this faculty
         const [students] = await pool.promise().query(
@@ -109,8 +136,9 @@ exports.registerFacultyWithSubjects = async (req, res) => {
 
       const facultyId = facultyResult.insertId;
       const subjectMappings = [];
+      const subjectIds = [];
 
-      // Check and create subject mappings for each subject
+      // Check and validate each subject
       for (const subjectData of subjects) {
         const { standard, subject, board } = subjectData;
 
@@ -129,21 +157,24 @@ exports.registerFacultyWithSubjects = async (req, res) => {
         }
 
         const subjectId = existingSubject[0].id;
-
-        // Create mapping between faculty and subject
-        const [mappingResult] = await connection.query(
-          'INSERT INTO facultymap (user_id, subject_id) VALUES (?, ?)',
-          [facultyId, subjectId]
-        );
+        subjectIds.push(subjectId);
 
         subjectMappings.push({
-          id: mappingResult.insertId,
           facultyId,
           subjectId,
           subjectName: subject,
           standard,
           board
         });
+      }
+
+      // Insert single facultymap record with all subject IDs as JSON array
+      if (subjectIds.length > 0) {
+        const subjectIdsJson = JSON.stringify(subjectIds);
+        await connection.query(
+          'INSERT INTO facultymap (user_id, subject_id) VALUES (?, ?)',
+          [facultyId, subjectIdsJson]
+        );
       }
 
       // Commit the transaction
@@ -219,13 +250,53 @@ exports.updateFacultyWithSubjects = async (req, res) => {
         [name, email, id]
       );
 
+      // Get current subject_ids AND student_ids before deleting
+      const [currentMappings] = await connection.query(
+        'SELECT subject_id, student_id FROM facultymap WHERE user_id = ? LIMIT 1',
+        [id]
+      );
+
+      // Extract all old subject IDs
+      const oldSubjectIds = [];
+      let currentStudentIds = [];
+      
+      if (currentMappings.length > 0) {
+        // Parse subject IDs
+        if (currentMappings[0].subject_id) {
+          try {
+            const ids = JSON.parse(currentMappings[0].subject_id);
+            if (Array.isArray(ids)) {
+              oldSubjectIds.push(...ids);
+            } else {
+              oldSubjectIds.push(ids);
+            }
+          } catch (e) {
+            oldSubjectIds.push(currentMappings[0].subject_id);
+          }
+        }
+
+        // Parse student IDs
+        if (currentMappings[0].student_id) {
+          try {
+            const ids = JSON.parse(currentMappings[0].student_id);
+            if (Array.isArray(ids)) {
+              currentStudentIds = ids.map(id => Number(id));
+            }
+          } catch (e) {
+            console.error('Failed to parse student IDs:', e);
+          }
+        }
+      }
+
       // Delete only subject mappings (not student mappings) for this faculty
       await connection.query(
         'DELETE FROM facultymap WHERE user_id = ? AND subject_id IS NOT NULL',
         [id]
       );
 
-      // Create new mappings for each subject
+      const subjectIds = [];
+
+      // Validate and collect all subject IDs
       for (const subjectData of subjects) {
         const { standard, subject, board } = subjectData;
 
@@ -243,11 +314,71 @@ exports.updateFacultyWithSubjects = async (req, res) => {
           });
         }
 
-        // Create new mapping
+        subjectIds.push(existingSubject[0].id);
+      }
+
+      // Insert single facultymap record with all subject IDs as JSON array
+      if (subjectIds.length > 0) {
+        const subjectIdsJson = JSON.stringify(subjectIds);
         await connection.query(
           'INSERT INTO facultymap (user_id, subject_id) VALUES (?, ?)',
-          [id, existingSubject[0].id]
+          [id, subjectIdsJson]
         );
+      }
+
+      // Find removed subject IDs and delete corresponding student mappings from subjectmap
+      const removedSubjectIds = oldSubjectIds.filter(oldId => !subjectIds.includes(oldId));
+      
+      if (removedSubjectIds.length > 0) {
+        console.log(`Removed subjects: ${JSON.stringify(removedSubjectIds)}`);
+        
+        // Delete from subjectmap ONLY for this faculty's students AND removed subjects
+        if (currentStudentIds.length > 0) {
+          const subjectPlaceholders = removedSubjectIds.map(() => '?').join(',');
+          const studentPlaceholders = currentStudentIds.map(() => '?').join(',');
+          
+          const [deleteResult] = await connection.query(
+            `DELETE FROM subjectmap 
+             WHERE subject_id IN (${subjectPlaceholders})
+             AND user_id IN (${studentPlaceholders})`,
+            [...removedSubjectIds, ...currentStudentIds]
+          );
+          
+          console.log(`Deleted ${deleteResult.affectedRows} student-subject mappings for removed subjects`);
+        }
+        
+        // Now update the facultymap student_id array to remove students who have NO subjects left with this faculty
+        if (currentStudentIds.length > 0) {
+          // For each student, check if they still have any subjects mapped to this faculty's remaining subjects
+          const remainingStudentIds = [];
+          
+          for (const studentId of currentStudentIds) {
+            // Check if student still has any of the remaining subjects
+            const placeholders = subjectIds.map(() => '?').join(',');
+            const [studentSubjects] = await connection.query(
+              `SELECT COUNT(*) as count FROM subjectmap 
+               WHERE user_id = ? AND subject_id IN (${placeholders})`,
+              [studentId, ...subjectIds]
+            );
+            
+            // If student still has subjects with this faculty, keep them in the array
+            if (studentSubjects[0].count > 0) {
+              remainingStudentIds.push(studentId);
+            }
+          }
+          
+          console.log(`Students still with faculty: ${remainingStudentIds.length} out of ${currentStudentIds.length}`);
+          
+          // Always update facultymap with the remaining students
+          const updatedStudentIdsJson = remainingStudentIds.length > 0 
+            ? JSON.stringify(remainingStudentIds) 
+            : null;
+            
+          await connection.query(
+            'UPDATE facultymap SET student_id = ? WHERE user_id = ?',
+            [updatedStudentIdsJson, id]
+          );
+        }
       }
 
       // Commit the transaction

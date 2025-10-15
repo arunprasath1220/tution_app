@@ -54,6 +54,7 @@ export default function FacultyList() {
   const [allStudents, setAllStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
+  const [selectedSubjects, setSelectedSubjects] = useState([]); // For subject selection when mapping
   const [studentSearchLoading, setStudentSearchLoading] = useState(false);
   const [mappedStudents, setMappedStudents] = useState([]);
   
@@ -209,6 +210,7 @@ export default function FacultyList() {
   const openStudentMapModal = (faculty) => {
     setSelectedFaculty(faculty);
     setSelectedStudents([]);
+    setSelectedSubjects([]);
     setSearchStudentQuery('');
     fetchAllStudents();
     fetchMappedStudents(faculty.id);
@@ -223,6 +225,17 @@ export default function FacultyList() {
       setSelectedStudents(selectedStudents.filter(s => s.id !== student.id));
     } else {
       setSelectedStudents([...selectedStudents, student]);
+    }
+  };
+
+  // Toggle subject selection for mapping
+  const toggleSubjectSelection = (subjectId) => {
+    const isAlreadySelected = selectedSubjects.includes(subjectId);
+    
+    if (isAlreadySelected) {
+      setSelectedSubjects(selectedSubjects.filter(id => id !== subjectId));
+    } else {
+      setSelectedSubjects([...selectedSubjects, subjectId]);
     }
   };
 
@@ -242,14 +255,20 @@ export default function FacultyList() {
       Alert.alert('Error', 'Please select at least one student to map');
       return;
     }
+
+    if (selectedSubjects.length === 0) {
+      Alert.alert('Error', 'Please select at least one subject for the students');
+      return;
+    }
     
     try {
       setLoading(true);
-      console.log(`📝 Mapping ${selectedStudents.length} students to faculty ${selectedFaculty.id}`);
+      console.log(`📝 Mapping ${selectedStudents.length} students to faculty ${selectedFaculty.id} with ${selectedSubjects.length} subjects`);
       
       const mappingData = {
         facultyId: selectedFaculty.id,
-        studentIds: selectedStudents.map(s => s.id)
+        studentIds: selectedStudents.map(s => s.id),
+        subjectIds: selectedSubjects
       };
       
       const response = await fetch(`${API_URL}/admin/mapStudentsToFaculty`, {
@@ -263,8 +282,9 @@ export default function FacultyList() {
       const data = await response.json();
       
       if (data.success) {
-        Alert.alert('Success', `Successfully mapped ${selectedStudents.length} students to ${selectedFaculty.name}`);
+        Alert.alert('Success', `Successfully mapped ${selectedStudents.length} students to ${selectedFaculty.name} with ${selectedSubjects.length} subject(s)`);
         setStudentMapModalVisible(false);
+        setSelectedSubjects([]);
         fetchFaculties();
       } else {
         Alert.alert('Error', data.message || 'Failed to map students to faculty');
@@ -779,7 +799,26 @@ export default function FacultyList() {
         <Text style={styles.mappedStudentName}>{item.name}</Text>
         <Text style={styles.mappedStudentEmail}>{item.email}</Text>
         
-        {item.board && item.standard && (
+        {item.subjects && item.subjects.length > 0 && (
+          <View style={styles.mappedSubjectsContainer}>
+            <Text style={styles.mappedSubjectsLabel}>Subjects:</Text>
+            <View style={styles.mappedSubjectsChips}>
+              {item.subjects.map((subject, index) => (
+                <View key={index} style={styles.mappedSubjectChip}>
+                  <Icon name="book" size={12} color={THEME.primary} style={{ marginRight: 4 }} />
+                  <Text style={styles.mappedSubjectText}>
+                    {subject.subjectname}
+                  </Text>
+                  <Text style={styles.mappedSubjectMeta}>
+                    {' '}• {subject.board} {subject.standard}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        
+        {item.board && item.standard && !item.subjects && (
           <View style={styles.studentDetailsChip}>
             <Text style={styles.studentDetailsText}>
               {item.board} • Class {item.standard}
@@ -1372,11 +1411,68 @@ export default function FacultyList() {
             </View>
             
             {selectedStudents.length > 0 && (
-              <View style={styles.selectedCountContainer}>
-                <Text style={styles.selectedCountText}>
-                  {selectedStudents.length} {selectedStudents.length === 1 ? 'student' : 'students'} selected
-                </Text>
-              </View>
+              <>
+                <View style={styles.selectedCountContainer}>
+                  <Text style={styles.selectedCountText}>
+                    {selectedStudents.length} {selectedStudents.length === 1 ? 'student' : 'students'} selected
+                  </Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.mappingSectionTitle}>Select Subjects</Text>
+                  <Text style={styles.mappingSectionSubtitle}>
+                    Choose which subjects the selected students will study with this faculty.
+                  </Text>
+
+                  {selectedFaculty && selectedFaculty.subjects && selectedFaculty.subjects.length > 0 ? (
+                    <View style={styles.subjectSelectionContainer}>
+                      {selectedFaculty.subjects.map((subject, index) => {
+                        const isSelected = selectedSubjects.includes(subject.id);
+                        return (
+                          <TouchableOpacity
+                            key={index}
+                            style={[
+                              styles.subjectSelectionChip,
+                              isSelected && styles.subjectSelectionChipSelected
+                            ]}
+                            onPress={() => toggleSubjectSelection(subject.id)}
+                          >
+                            <View style={[
+                              styles.subjectCheckbox,
+                              isSelected && styles.subjectCheckboxSelected
+                            ]}>
+                              {isSelected && <Icon name="check" size={16} color="#fff" />}
+                            </View>
+                            <View style={styles.subjectSelectionInfo}>
+                              <Text style={[
+                                styles.subjectSelectionText,
+                                isSelected && styles.subjectSelectionTextSelected
+                              ]}>
+                                {subject.subjectname}
+                              </Text>
+                              <Text style={styles.subjectSelectionMeta}>
+                                {subject.board} • Class {subject.standard}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <Text style={styles.noSubjectsText}>No subjects available for this faculty.</Text>
+                  )}
+
+                  {selectedSubjects.length > 0 && (
+                    <View style={[styles.selectedCountContainer, { marginTop: 12 }]}>
+                      <Text style={styles.selectedCountText}>
+                        {selectedSubjects.length} {selectedSubjects.length === 1 ? 'subject' : 'subjects'} selected
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </>
             )}
             
             {/* Extra padding to ensure content isn't hidden behind the fixed bottom bar */}
@@ -1394,10 +1490,10 @@ export default function FacultyList() {
             <TouchableOpacity
               style={[
                 styles.fixedSubmitButton,
-                selectedStudents.length === 0 && styles.disabledButton
+                (selectedStudents.length === 0 || selectedSubjects.length === 0) && styles.disabledButton
               ]}
               onPress={mapStudentsToFaculty}
-              disabled={selectedStudents.length === 0 || loading}
+              disabled={selectedStudents.length === 0 || selectedSubjects.length === 0 || loading}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" size="small" />
@@ -2306,5 +2402,94 @@ const styles = StyleSheet.create({
   studentDetailsText: {
     fontSize: 11,
     color: THEME.primary,
+  },
+  // Mapped subjects display
+  mappedSubjectsContainer: {
+    marginTop: 8,
+  },
+  mappedSubjectsLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#495057',
+    marginBottom: 6,
+  },
+  mappedSubjectsChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  mappedSubjectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.primary + '10',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: THEME.primary + '30',
+  },
+  mappedSubjectText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+  },
+  mappedSubjectMeta: {
+    fontSize: 10,
+    color: THEME.light,
+  },
+  // Subject selection styles
+  subjectSelectionContainer: {
+    marginTop: 8,
+  },
+  subjectSelectionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  subjectSelectionChipSelected: {
+    backgroundColor: THEME.primary + '10',
+    borderColor: THEME.primary,
+    borderWidth: 2,
+  },
+  subjectCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#adb5bd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  subjectCheckboxSelected: {
+    backgroundColor: THEME.primary,
+    borderColor: THEME.primary,
+  },
+  subjectSelectionInfo: {
+    flex: 1,
+  },
+  subjectSelectionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  subjectSelectionTextSelected: {
+    color: THEME.primary,
+  },
+  subjectSelectionMeta: {
+    fontSize: 12,
+    color: '#6c757d',
+  },
+  noSubjectsText: {
+    textAlign: 'center',
+    padding: 12,
+    color: '#6c757d',
+    fontStyle: 'italic',
   },
 });
