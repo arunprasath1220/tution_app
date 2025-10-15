@@ -323,27 +323,36 @@ export default function AddSubject() {
 
   const renderBoard = (board, index) => {
     const boardColor = getBoardColor(board.title);
+    const totalStandards = board.data.length;
     
     return (
       <View key={`board-${index}`} style={styles.boardContainer}>
-        {/* Board Header */}
-        <View style={[styles.boardHeader, { borderLeftColor: boardColor }]}>
-          <Text style={styles.boardTitle}>{board.title}</Text>
-          <View style={[styles.boardCounter, { backgroundColor: boardColor }]}>
-            <Text style={styles.boardCounterText}>
-              {board.data.reduce((total, stdGroup) => total + stdGroup.subjects.length, 0)}
-            </Text>
+        {/* Elegant Board Header with Card Design */}
+        <View style={[styles.boardCard, { borderTopColor: boardColor }]}>
+          <View style={styles.boardHeaderContent}>
+            <View style={styles.boardTitleRow}>
+              <View style={[styles.boardIconCircle, { backgroundColor: boardColor + '20' }]}>
+                <Icon name="account-balance" size={22} color={boardColor} />
+              </View>
+              <View style={styles.boardTextContainer}>
+                <Text style={[styles.boardTitle, { color: boardColor }]}>{board.title}</Text>
+                <Text style={styles.boardSubtitle}>
+                  {totalStandards} {totalStandards === 1 ? 'standard' : 'standards'} available
+                </Text>
+              </View>
+            </View>
+          </View>
+          
+          {/* Standards within this board */}
+          <View style={styles.standardsContainer}>
+            {board.data.map((standardGroup, stdIndex) => renderStandardGroup(standardGroup, boardColor, stdIndex))}
           </View>
         </View>
-        
-        {/* Standards within this board */}
-        {board.data.map((standardGroup, stdIndex) => renderStandardGroup(standardGroup, boardColor, stdIndex))}
       </View>
     );
   };
 
   const renderStandardGroup = (standardGroup, boardColor, index) => {
-    // Use a slightly lighter shade for standard headers
     const standardColor = boardColor === THEME.primary ? THEME.light : 
                          boardColor === THEME.light ? THEME.lighter : 
                          boardColor === THEME.lighter ? THEME.lightest :
@@ -351,39 +360,46 @@ export default function AddSubject() {
                          
     return (
       <View key={`std-${index}`} style={styles.standardContainer}>
-        {/* Standard Header */}
-        <View style={[styles.standardHeader, { borderLeftColor: standardColor }]}>
-          <Text style={styles.standardTitle}>Standard {standardGroup.standard}</Text>
-          <View style={[styles.standardCounter, { backgroundColor: standardColor }]}>
-            <Text style={styles.standardCounterText}>{standardGroup.subjects.length}</Text>
+        {/* Elegant Standard Header */}
+        <View style={styles.standardCard}>
+          <View style={styles.standardHeaderRow}>
+            <View style={[styles.standardIconCircle, { backgroundColor: standardColor + '20' }]}>
+              <Icon name="class" size={18} color={standardColor} />
+            </View>
+            <Text style={[styles.standardTitle, { color: standardColor }]}>
+              Standard {standardGroup.standard}
+            </Text>
+            <Text style={styles.standardSubjectCount}>
+              {standardGroup.subjects.length} {standardGroup.subjects.length === 1 ? 'subject' : 'subjects'}
+            </Text>
+          </View>
+          
+          {/* Subjects within this standard */}
+          <View style={styles.subjectsGrid}>
+            {standardGroup.subjects.map((subject, subIndex) => renderSubject(subject, standardColor, subIndex))}
           </View>
         </View>
-        
-        {/* Subjects within this standard */}
-        {standardGroup.subjects.map((subject, subIndex) => renderSubject(subject, standardColor, subIndex))}
       </View>
     );
   };
 
   const renderSubject = (subject, standardColor, index) => {
-    // Use an even lighter shade for subject cards
     const subjectColor = standardColor === THEME.light ? THEME.lighter : 
                        standardColor === THEME.lighter ? THEME.lightest :
                        standardColor === THEME.lightest ? THEME.primary :
                        THEME.light;
                        
     return (
-      <View key={`subject-${subject.id}`} style={[styles.subjectCard, { borderLeftColor: subjectColor }]}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.subjectName}>{subject.subjectname}</Text>
-          <TouchableOpacity 
-            style={styles.infoIcon}
-            onPress={() => openSubjectActionModal(subject)}
-          >
-            <Icon name="more-vert" size={20} color={THEME.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <TouchableOpacity 
+        key={`subject-${subject.id}`} 
+        style={styles.subjectChip}
+        onPress={() => openSubjectActionModal(subject)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.subjectIconDot, { backgroundColor: subjectColor }]} />
+        <Text style={styles.subjectChipText} numberOfLines={1}>{subject.subjectname}</Text>
+        <Icon name="more-vert" size={16} color="#999" />
+      </TouchableOpacity>
     );
   };
 
@@ -391,83 +407,84 @@ export default function AddSubject() {
     <View style={styles.container}>
       <StatusBar backgroundColor={THEME.primary} barStyle="light-content" />
       
-      {/* Header */}
+      {/* Elegant Header with Gradient Effect */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Subject Management</Text>
-        <Text style={styles.headerSubtitle}>Manage your course subjects</Text>
-      </View>
-      
-      {/* Action Buttons */}
-      <View style={styles.actionContainer}>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.buttonText}>+ Add Subject</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.refreshButton}
-          onPress={fetchSubjects}
-          disabled={refreshing}
-        >
-          {refreshing ? (
-            <ActivityIndicator color={THEME.primary} size="small" />
-          ) : (
-            <Text style={styles.refreshButtonText}>↻ Refresh</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats Card */}
-      <View style={styles.statsCard}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{subjects.length}</Text>
-          <Text style={styles.statLabel}>Total Subjects</Text>
-        </View>
-        
-        <View style={styles.statDivider} />
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>
-            {[...new Set(subjects.map(s => s.standard))].length}
-          </Text>
-          <Text style={styles.statLabel}>Standards</Text>
-        </View>
-        
-        <View style={styles.statDivider} />
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>
-            {[...new Set(subjects.map(s => s.board))].length}
-          </Text>
-          <Text style={styles.statLabel}>Boards</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Subject Management</Text>
+            <Text style={styles.headerSubtitle}>Organize and manage your academic subjects</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.headerAddButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Icon name="add" size={28} color={THEME.text.light} />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Subject List - Hierarchical Structure */}
+      {/* Subject List - Hierarchical Structure with Better Grouping */}
       <ScrollView 
         style={styles.listContainer}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshing={refreshing}
+        onRefresh={fetchSubjects}
       >
+        {/* Quick Stats Dashboard in Single Line */}
+        <View style={styles.statsDashboard}>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, styles.statCard1]}>
+              <Icon name="library-books" size={20} color={THEME.primary} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>{subjects.length}</Text>
+                <Text style={styles.statLabel}>Subjects</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.statCard2]}>
+              <Icon name="school" size={20} color={THEME.light} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>
+                  {[...new Set(subjects.map(s => s.standard))].length}
+                </Text>
+                <Text style={styles.statLabel}>Standards</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.statCard3]}>
+              <Icon name="account-balance" size={20} color={THEME.lighter} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>
+                  {[...new Set(subjects.map(s => s.board))].length}
+                </Text>
+                <Text style={styles.statLabel}>Boards</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {nestedSubjects.length > 0 ? (
-          <>
+          <View style={styles.subjectsWrapper}>
+            <View style={styles.sectionHeaderContainer}>
+              <Icon name="folder-open" size={20} color={THEME.primary} />
+              <Text style={styles.sectionHeaderText}>All Subjects</Text>
+              <View style={styles.sectionHeaderLine} />
+            </View>
             {nestedSubjects.map((board, index) => renderBoard(board, index))}
-          </>
+          </View>
         ) : (
           <View style={styles.emptyContainer}>
-            <Image 
-              source={{ uri: BOOK_ICON }} 
-              style={styles.emptyIcon} 
-              resizeMode="contain"
-            />
-            <Text style={styles.emptyText}>No subjects found</Text>
+            <View style={styles.emptyIconCircle}>
+              <Icon name="library-books" size={60} color={THEME.lightest} />
+            </View>
+            <Text style={styles.emptyTitle}>No Subjects Yet</Text>
+            <Text style={styles.emptyText}>Start by adding your first subject to organize your courses</Text>
             <TouchableOpacity 
               style={styles.emptyButton}
               onPress={() => setModalVisible(true)}
             >
+              <Icon name="add-circle" size={20} color="#fff" style={{ marginRight: 8 }} />
               <Text style={styles.emptyButtonText}>Add Your First Subject</Text>
             </TouchableOpacity>
           </View>
@@ -741,27 +758,344 @@ export default function AddSubject() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f8f9fa'
+    backgroundColor: '#f5f7fa'
   },
   header: {
     backgroundColor: THEME.primary,
-    paddingVertical: 24,
+    paddingTop: 20,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    shadowColor: THEME.primary,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: THEME.text.light,
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '400',
+  },
+  headerAddButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  // Stats Dashboard
+  statsDashboard: {
+    marginBottom: 20,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    // elevation: 1,
+  },
+  statCard1: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.primary,
+  },
+  statCard2: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.light,
+  },
+  statCard3: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.lighter,
+  },
+  statTextContainer: {
+    marginLeft: 8,
+    alignItems: 'flex-start',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2d3436',
+    lineHeight: 20,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#636e72',
+    fontWeight: '600',
+  },
+  // List Container
+  listContainer: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+  subjectsWrapper: {
+    marginTop: 10,
+  },
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginLeft: 8,
+  },
+  sectionHeaderLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: THEME.lightest + '40',
+    marginLeft: 12,
+    borderRadius: 1,
+  },
+  // Board Card - Completely Redesigned
+  boardContainer: {
+    marginBottom: 20,
+  },
+  boardCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    borderTopWidth: 4,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  boardHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  boardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  boardIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  boardTextContainer: {
+    flex: 1,
+  },
+  boardTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  boardSubtitle: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    fontWeight: '500',
+  },
+  boardBadge: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  boardBadgeText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  standardsContainer: {
+    marginTop: 8,
+  },
+  // Standard Card - Elegant Design
+  standardContainer: {
+    marginBottom: 16,
+  },
+  standardCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 14,
+    padding: 16,
+  },
+  standardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  standardIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  standardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+    letterSpacing: 0.2,
+  },
+  standardSubjectCount: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    fontWeight: '600',
+  },
+  standardBadge: {
+    minWidth: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  standardBadgeText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  // Subjects Grid - Chip Design
+  subjectsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  subjectChip: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    margin: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  subjectIconDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  subjectChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d3436',
+    marginRight: 6,
+    maxWidth: 150,
+  },
+  // Empty State - More Attractive
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 30,
+  },
+  emptyIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: THEME.lightest + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 8,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 15,
+    color: '#636e72',
+    marginBottom: 30,
+    lineHeight: 22,
+    paddingHorizontal: 20,
+  },
+  emptyButton: {
+    backgroundColor: THEME.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: THEME.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  emptyButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 15,
   },
   // Full screen modal styles
   fullScreenModalContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f5f7fa',
   },
   fullScreenModalHeader: {
     backgroundColor: THEME.primary,
@@ -770,13 +1104,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    elevation: 3,
+    elevation: 8,
+    shadowColor: THEME.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   backButton: {
     padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
   },
   headerSpacer: {
-    width: 40, // Balance the header layout
+    width: 40,
   },
   fullScreenModalTitle: {
     fontSize: 18,
@@ -786,8 +1129,9 @@ const styles = StyleSheet.create({
   },
   fullScreenModalSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
     textAlign: 'center',
+    marginTop: 2,
   },
   fullScreenScrollView: {
     flex: 1,
@@ -796,16 +1140,27 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   fullScreenFormSection: {
-    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   fullScreenSectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: THEME.primary,
-    marginBottom: 16,
+    marginBottom: 20,
+    letterSpacing: 0.3,
   },
   formFieldContainer: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   fixedBottomBar: {
     position: 'absolute',
@@ -816,11 +1171,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e9ecef',
     backgroundColor: '#ffffff',
-    elevation: 8,
+    elevation: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   fixedCancelButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     borderRightWidth: 0.5,
     borderRightColor: '#e9ecef',
@@ -828,7 +1190,7 @@ const styles = StyleSheet.create({
   },
   fixedSubmitButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     backgroundColor: THEME.primary,
     borderLeftWidth: 0.5,
@@ -837,323 +1199,38 @@ const styles = StyleSheet.create({
   infoContainer: {
     flexDirection: 'row',
     backgroundColor: THEME.lightest + '15',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
-    borderLeftWidth: 3,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 12,
+    borderLeftWidth: 4,
     borderLeftColor: THEME.lightest,
   },
   infoIcon: {
-    marginRight: 8,
+    marginRight: 10,
     marginTop: 2,
   },
   infoText: {
     color: THEME.text.dark,
-    fontSize: 14,
+    fontSize: 13,
     flex: 1,
     lineHeight: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: THEME.text.light,
-    marginBottom: 4
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  actionContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginTop: -20,
-    marginBottom: 20
-  },
-  addButton: {
-    backgroundColor: 'white',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    flex: 1,
-    marginRight: 10,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
-  },
-  buttonText: {
-    color: THEME.primary,
-    fontWeight: '700',
-    fontSize: 15,
-    textAlign: 'center'
-  },
-  refreshButton: {
-    backgroundColor: 'white',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 30,
-    justifyContent: 'center',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
-  },
-  refreshButtonText: {
-    color: THEME.primary,
-    fontWeight: '700',
-    fontSize: 15
-  },
-  statsCard: {
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.07,
-    shadowRadius: 3.84,
-    elevation: 3,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: THEME.primary,
-    marginBottom: 4
-  },
-  statLabel: {
-    fontSize: 12,
-    color: THEME.text.muted
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#e9ecef',
-    marginHorizontal: 10
-  },
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: 20
-  },
-  listContent: {
-    paddingBottom: 20
-  },
-  
-  // Board container and header
-  boardContainer: {
-    marginBottom: 16
-  },
-  boardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderLeftWidth: 8,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  boardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#212529',
-  },
-  boardCounter: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  boardCounterText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  
-  // Standard container and header
-  standardContainer: {
-    marginLeft: 15,
-    marginBottom: 12
-  },
-  standardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderLeftWidth: 5,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  standardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#343a40',
-  },
-  standardCounter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  standardCounterText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 11,
-  },
-  
-  // Subject card styles
-  subjectCard: {
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    marginLeft: 15,
-    borderLeftWidth: 3,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  subjectName: {
-    fontSize: 15,
     fontWeight: '500',
-    color: '#343a40',
-    flex: 1,
-  },
-  infoIcon: {
-    padding: 5, 
-    borderRadius: 15,
-  },
-  
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 50,
-    marginTop: 20
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
-    opacity: 0.8
-  },
-  emptyText: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: THEME.text.muted,
-    marginBottom: 20
-  },
-  emptyButton: {
-    backgroundColor: THEME.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30
-  },
-  emptyButtonText: {
-    color: 'white',
-    fontWeight: '600'
-  },
-  
-  // Modal styles
-  centeredView: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: 'rgba(0,0,0,0.5)'
-  },
-  modalView: {
-    width: '90%',
-    maxHeight: '80%',
-    backgroundColor: "white",
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5
-  },
-  modalHeader: {
-    paddingTop: 20,
-    paddingHorizontal: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 12,
-    textAlign: "center",
-    color: THEME.primary
-  },
-  modalDivider: {
-    height: 1,
-    backgroundColor: '#e9ecef',
-    marginBottom: 16
-  },
-  formContainer: {
-    padding: 20,
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontWeight: "700",
+    marginBottom: 10,
     color: THEME.text.dark,
     marginLeft: 2,
+    letterSpacing: 0.2,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#e9ecef',
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
     marginBottom: 8,
     shadowColor: "#000",
     shadowOffset: {
@@ -1161,8 +1238,10 @@ const styles = StyleSheet.create({
       height: 1,
     },
     shadowOpacity: 0.05,
-    shadowRadius: 1,
+    shadowRadius: 2,
     elevation: 1,
+    color: '#2d3436',
+    fontWeight: '600',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -1171,19 +1250,19 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     borderRightWidth: 0.5,
     borderRightColor: '#e9ecef',
   },
   cancelButtonText: {
-    color: THEME.text.muted,
-    fontWeight: '600',
-    fontSize: 16
+    color: '#636e72',
+    fontWeight: '700',
+    fontSize: 16,
   },
   submitButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     backgroundColor: THEME.primary,
     borderLeftWidth: 0.5,
@@ -1191,69 +1270,78 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: 'white',
-    fontWeight: '600',
-    fontSize: 16
+    fontWeight: '700',
+    fontSize: 16,
   },
-
-  // Action Modal
+  // Action Modal - Updated for Better UX
   actionModalView: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    width: '80%',
+    borderRadius: 24,
+    width: '85%',
     padding: 0,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 8,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    overflow: 'hidden'
+    shadowRadius: 12,
+    elevation: 10,
+    overflow: 'hidden',
   },
   actionModalHeader: {
-    padding: 20,
+    padding: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
   },
   actionModalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: THEME.primary,
-    marginBottom: 4
+    marginBottom: 6,
+    letterSpacing: 0.3,
   },
   actionModalSubtitle: {
     fontSize: 14,
-    color: '#6c757d',
+    color: '#636e72',
+    fontWeight: '500',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   actionIcon: {
-    marginRight: 15,
+    marginRight: 16,
   },
   actionText: {
     fontSize: 16,
-    color: '#495057',
+    color: '#2d3436',
+    fontWeight: '600',
   },
   deleteButton: {
     borderBottomWidth: 0,
   },
   closeButton: {
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
-    backgroundColor: '#f8f9fa'
+    backgroundColor: '#f8f9fa',
   },
   closeButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6c757d'
-  }
+    fontWeight: '700',
+    color: '#636e72',
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
 });
