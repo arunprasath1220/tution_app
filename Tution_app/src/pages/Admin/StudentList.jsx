@@ -65,6 +65,13 @@ export default function StudentList() {
   const [expandedBoards, setExpandedBoards] = useState({});
   const [expandedStandards, setExpandedStandards] = useState({});
   const [expandedSubjects, setExpandedSubjects] = useState({});
+  
+  // For navigation between views
+  const [currentView, setCurrentView] = useState('boards'); // 'boards', 'standards', 'subjects'
+  const [selectedBoard, setSelectedBoard] = useState(null);
+  const [selectedStandard, setSelectedStandard] = useState(null);
+  const [selectedBoardData, setSelectedBoardData] = useState(null);
+  const [selectedStandardData, setSelectedStandardData] = useState(null);
 
   useEffect(() => {
     fetchStudents();
@@ -631,6 +638,33 @@ export default function StudentList() {
     setSearchQuery('');
   };
 
+  // Navigation handlers
+  const handleBoardClick = (boardData) => {
+    setSelectedBoard(boardData.board);
+    setSelectedBoardData(boardData);
+    setCurrentView('standards');
+  };
+
+  const handleStandardClick = (standardData, boardData) => {
+    setSelectedStandard(standardData.standard);
+    setSelectedStandardData(standardData);
+    setCurrentView('subjects');
+  };
+
+  const handleBackToBoards = () => {
+    setCurrentView('boards');
+    setSelectedBoard(null);
+    setSelectedBoardData(null);
+    setSelectedStandard(null);
+    setSelectedStandardData(null);
+  };
+
+  const handleBackToStandards = () => {
+    setCurrentView('standards');
+    setSelectedStandard(null);
+    setSelectedStandardData(null);
+  };
+
   // Generate a variant of the theme color based on the board name
   const getBoardColor = (boardName) => {
     if (!boardName) return THEME.primary;
@@ -648,7 +682,7 @@ export default function StudentList() {
     return variants[nameHash % variants.length];
   };
 
-  // Render board section with elegant cards
+  // Render board section with elegant cards (for boards view)
   const renderBoardSection = (boardData, boardIndex) => {
     const boardColor = getBoardColor(boardData.board);
     const totalStudents = boardData.standards.reduce(
@@ -656,16 +690,16 @@ export default function StudentList() {
       0
     );
     const totalStandards = boardData.standards.length;
-    const isExpanded = expandedBoards[boardData.board];
     
     return (
-      <View key={`board-${boardIndex}`} style={styles.boardContainer}>
+      <TouchableOpacity 
+        key={`board-${boardIndex}`} 
+        style={styles.boardContainer}
+        onPress={() => handleBoardClick(boardData)}
+        activeOpacity={0.7}
+      >
         <View style={[styles.boardCard, { borderTopColor: boardColor }]}>
-          <TouchableOpacity
-            style={styles.boardHeaderContent}
-            onPress={() => toggleBoardExpansion(boardData.board)}
-            activeOpacity={0.7}
-          >
+          <View style={styles.boardHeaderContent}>
             <View style={styles.boardTitleRow}>
               <View style={[styles.boardIconCircle, { backgroundColor: boardColor + '20' }]}>
                 <Icon name="account-balance" size={22} color={boardColor} />
@@ -677,26 +711,68 @@ export default function StudentList() {
                 </Text>
               </View>
               <Icon 
-                name={isExpanded ? "expand-less" : "expand-more"} 
-                size={24} 
+                name="chevron-right" 
+                size={28} 
                 color={boardColor} 
               />
             </View>
-          </TouchableOpacity>
-          
-          {isExpanded && (
-            <View style={styles.standardsContainer}>
-              {boardData.standards.map((standardData, stdIndex) => 
-                renderStandardSection(standardData, boardColor, boardData.board, stdIndex)
-              )}
-            </View>
-          )}
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
-  // Render standard section
+  // Render standard cards (for standards view)
+  const renderStandardCard = (standardData, stdIndex) => {
+    const boardColor = getBoardColor(selectedBoard);
+    const standardColor = boardColor === THEME.primary ? THEME.light : 
+                         boardColor === THEME.light ? THEME.lighter : 
+                         boardColor === THEME.lighter ? THEME.lightest :
+                         THEME.primary;
+    const totalStudents = standardData.subjects.reduce((total, subj) => total + subj.students.length, 0);
+    const totalSubjects = standardData.subjects.length;
+    
+    return (
+      <TouchableOpacity 
+        key={`std-${stdIndex}`} 
+        style={styles.standardSquareCard}
+        onPress={() => handleStandardClick(standardData, selectedBoardData)}
+        activeOpacity={0.8}
+      >
+        <View style={[styles.standardSquareContent, { backgroundColor: 'white' }]}>
+          <View style={[styles.standardSquareTop, { borderTopColor: standardColor }]}>
+            <View style={[styles.standardSquareIconCircle, { backgroundColor: standardColor + '20' }]}>
+              <Icon name="class" size={28} color={standardColor} />
+            </View>
+          </View>
+          
+          <View style={styles.standardSquareBottom}>
+            <Text style={[styles.standardSquareTitle, { color: standardColor }]}>
+              Standard {standardData.standard}
+            </Text>
+            
+            <View style={styles.standardSquareStats}>
+              <View style={styles.standardSquareStat}>
+                <Icon name="person" size={16} color="#636e72" />
+                <Text style={styles.standardSquareStatText}>
+                  {totalStudents} {totalStudents === 1 ? 'Student' : 'Students'}
+                </Text>
+              </View>
+              
+              <View style={styles.standardSquareStat}>
+                <Icon name="book" size={16} color="#636e72" />
+                <Text style={styles.standardSquareStatText}>
+                  {totalSubjects} {totalSubjects === 1 ? 'Subject' : 'Subjects'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Render standard section (OLD - keep for subjects view)
   const renderStandardSection = (standardData, boardColor, boardName, stdIndex) => {
     const standardColor = boardColor === THEME.primary ? THEME.light : 
                          boardColor === THEME.light ? THEME.lighter : 
@@ -899,9 +975,25 @@ export default function StudentList() {
       {/* Elegant Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
+          {currentView !== 'boards' && (
+            <TouchableOpacity 
+              style={styles.headerBackButton}
+              onPress={currentView === 'standards' ? handleBackToBoards : handleBackToStandards}
+            >
+              <Icon name="arrow-back" size={24} color={THEME.text.light} />
+            </TouchableOpacity>
+          )}
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Student Management</Text>
-            <Text style={styles.headerSubtitle}>View and manage students across all subjects</Text>
+            <Text style={styles.headerTitle}>
+              {currentView === 'boards' ? 'Student Management' : 
+               currentView === 'standards' ? selectedBoard :
+               `Standard ${selectedStandard}`}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              {currentView === 'boards' ? 'View and manage students across all subjects' :
+               currentView === 'standards' ? 'Select a standard to view subjects' :
+               'View students by subject'}
+            </Text>
           </View>
           <TouchableOpacity 
             style={styles.headerAddButton}
@@ -912,7 +1004,7 @@ export default function StudentList() {
         </View>
       </View>
 
-      {/* Subject List */}
+      {/* Content based on current view */}
       <ScrollView 
         style={styles.listContainer}
         contentContainerStyle={styles.listContent}
@@ -920,93 +1012,174 @@ export default function StudentList() {
         refreshing={refreshing}
         onRefresh={fetchStudents}
       >
-        {/* Quick Stats Dashboard in Single Line */}
-        <View style={styles.statsDashboard}>
-          <View style={styles.statsRow}>
-            <View style={[styles.statCard, styles.statCard1]}>
-              <Icon name="school" size={20} color={THEME.primary} />
-              <View style={styles.statTextContainer}>
-                <Text style={styles.statNumber}>{students.length}</Text>
-                <Text style={styles.statLabel}>Students</Text>
+        {/* Quick Stats Dashboard - Only show in boards view */}
+        {currentView === 'boards' && (
+          <View style={styles.statsDashboard}>
+            <View style={styles.statsRow}>
+              <View style={[styles.statCard, styles.statCard1]}>
+                <Icon name="school" size={20} color={THEME.primary} />
+                <View style={styles.statTextContainer}>
+                  <Text style={styles.statNumber}>{students.length}</Text>
+                  <Text style={styles.statLabel}>Students</Text>
+                </View>
               </View>
-            </View>
-            
-            <View style={[styles.statCard, styles.statCard2]}>
-              <Icon name="class" size={20} color={THEME.light} />
-              <View style={styles.statTextContainer}>
-                <Text style={styles.statNumber}>
-                  {[...new Set(students.flatMap(s => s.subjects?.map(subj => subj.standard) || []))].length}
-                </Text>
-                <Text style={styles.statLabel}>Standards</Text>
+              
+              <View style={[styles.statCard, styles.statCard2]}>
+                <Icon name="class" size={20} color={THEME.light} />
+                <View style={styles.statTextContainer}>
+                  <Text style={styles.statNumber}>
+                    {[...new Set(students.flatMap(s => s.subjects?.map(subj => subj.standard) || []))].length}
+                  </Text>
+                  <Text style={styles.statLabel}>Standards</Text>
+                </View>
               </View>
-            </View>
-            
-            <View style={[styles.statCard, styles.statCard3]}>
-              <Icon name="account-balance" size={20} color={THEME.lighter} />
-              <View style={styles.statTextContainer}>
-                <Text style={styles.statNumber}>
-                  {[...new Set(students.flatMap(s => s.subjects?.map(subj => subj.board) || []))].length}
-                </Text>
-                <Text style={styles.statLabel}>Boards</Text>
+              
+              <View style={[styles.statCard, styles.statCard3]}>
+                <Icon name="account-balance" size={20} color={THEME.lighter} />
+                <View style={styles.statTextContainer}>
+                  <Text style={styles.statNumber}>
+                    {[...new Set(students.flatMap(s => s.subjects?.map(subj => subj.board) || []))].length}
+                  </Text>
+                  <Text style={styles.statLabel}>Boards</Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        )}
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#7f8c8d" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name, email, subject..."
-            placeholderTextColor="#adb5bd"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
-              <Icon name="clear" size={18} color="#7f8c8d" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {groupedData.length > 0 ? (
-          <View style={styles.subjectsWrapper}>
-            <View style={styles.sectionHeaderContainer}>
-              <Icon name="folder-open" size={20} color={THEME.primary} />
-              <Text style={styles.sectionHeaderText}>All Students</Text>
-              <View style={styles.sectionHeaderLine} />
-            </View>
-            {groupedData.map((boardData, boardIndex) => renderBoardSection(boardData, boardIndex))}
-          </View>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-              <Icon name={isSearching ? "search-off" : "school"} size={60} color={THEME.lightest} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {isSearching ? "No matching students" : "No Students Yet"}
-            </Text>
-            <Text style={styles.emptyText}>
-              {isSearching 
-                ? "Try a different search term" 
-                : "Start by adding your first student to get organized"
-              }
-            </Text>
-            {!isSearching && (
-              <TouchableOpacity 
-                style={styles.emptyButton}
-                onPress={() => setModalVisible(true)}
-              >
-                <Icon name="person-add" size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.emptyButtonText}>Add Your First Student</Text>
+        {/* Search Bar - Only show in boards view */}
+        {currentView === 'boards' && (
+          <View style={styles.searchContainer}>
+            <Icon name="search" size={20} color="#7f8c8d" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name, email, subject..."
+              placeholderTextColor="#adb5bd"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
+                <Icon name="clear" size={18} color="#7f8c8d" />
               </TouchableOpacity>
             )}
           </View>
         )}
+
+        {/* Boards View */}
+        {currentView === 'boards' && (
+          groupedData.length > 0 ? (
+            <View style={styles.subjectsWrapper}>
+              <View style={styles.sectionHeaderContainer}>
+                <Icon name="account-balance" size={20} color={THEME.primary} />
+                <Text style={styles.sectionHeaderText}>All Boards</Text>
+                <View style={styles.sectionHeaderLine} />
+              </View>
+              {groupedData.map((boardData, boardIndex) => renderBoardSection(boardData, boardIndex))}
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Icon name={isSearching ? "search-off" : "school"} size={60} color={THEME.lightest} />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {isSearching ? "No matching students" : "No Students Yet"}
+              </Text>
+              <Text style={styles.emptyText}>
+                {isSearching 
+                  ? "Try a different search term" 
+                  : "Start by adding your first student to get organized"
+                }
+              </Text>
+              {!isSearching && (
+                <TouchableOpacity 
+                  style={styles.emptyButton}
+                  onPress={() => setModalVisible(true)}
+                >
+                  <Icon name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.emptyButtonText}>Add Your First Student</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )
+        )}
+
+        {/* Standards View */}
+        {currentView === 'standards' && selectedBoardData && (
+          <View style={styles.standardsGridWrapper}>
+            {/* Info Banner */}
+            <View style={styles.infoBanner}>
+              <Icon name="info-outline" size={20} color={THEME.primary} style={{ marginRight: 10 }} />
+              <Text style={styles.infoBannerText}>
+                Select a standard to view subjects and students
+              </Text>
+            </View>
+            
+            <View style={styles.sectionHeaderContainer}>
+              <Icon name="class" size={20} color={THEME.primary} />
+              <Text style={styles.sectionHeaderText}>Available Standards</Text>
+              <View style={styles.sectionHeaderLine} />
+            </View>
+            
+            <View style={styles.standardsGrid}>
+              {selectedBoardData.standards.map((standardData, stdIndex) => 
+                renderStandardCard(standardData, stdIndex)
+              )}
+            </View>
+            
+            {/* Quick Stats for this Board */}
+            <View style={styles.boardStatsContainer}>
+              <Text style={styles.boardStatsTitle}>Board Statistics</Text>
+              <View style={styles.boardStatsRow}>
+                <View style={styles.boardStatItem}>
+                  <Icon name="class" size={24} color={THEME.light} />
+                  <Text style={styles.boardStatNumber}>
+                    {selectedBoardData.standards.length}
+                  </Text>
+                  <Text style={styles.boardStatLabel}>Standards</Text>
+                </View>
+                
+                <View style={styles.boardStatItem}>
+                  <Icon name="book" size={24} color={THEME.lighter} />
+                  <Text style={styles.boardStatNumber}>
+                    {selectedBoardData.standards.reduce((sum, std) => sum + std.subjects.length, 0)}
+                  </Text>
+                  <Text style={styles.boardStatLabel}>Subjects</Text>
+                </View>
+                
+                <View style={styles.boardStatItem}>
+                  <Icon name="person" size={24} color={THEME.lightest} />
+                  <Text style={styles.boardStatNumber}>
+                    {selectedBoardData.standards.reduce(
+                      (total, std) => total + std.subjects.reduce((stdTotal, subj) => stdTotal + subj.students.length, 0), 
+                      0
+                    )}
+                  </Text>
+                  <Text style={styles.boardStatLabel}>Students</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Subjects View */}
+        {currentView === 'subjects' && selectedStandardData && (
+          <View style={styles.subjectsWrapper}>
+            <View style={styles.sectionHeaderContainer}>
+              <Icon name="book" size={20} color={THEME.primary} />
+              <Text style={styles.sectionHeaderText}>Subjects & Students</Text>
+              <View style={styles.sectionHeaderLine} />
+            </View>
+            <View style={styles.subjectsGrid}>
+              {selectedStandardData.subjects.map((subjectData, subIndex) => 
+                renderSubjectSection(subjectData, getBoardColor(selectedBoard), selectedBoard, selectedStandard, subIndex)
+              )}
+            </View>
+          </View>
+        )}
       </ScrollView>
-      
+
       {/* Add Student Modal - Full Screen */}
       <Modal
         animationType="slide"
@@ -1292,6 +1465,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerBackButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   headerTextContainer: {
     flex: 1,
   },
@@ -1515,6 +1697,146 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7f8c8d',
     fontWeight: '600',
+  },
+  // Standards Grid Wrapper
+  standardsGridWrapper: {
+    marginTop: 10,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.lightest + '20',
+    borderLeftWidth: 4,
+    borderLeftColor: THEME.primary,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  infoBannerText: {
+    flex: 1,
+    fontSize: 14,
+    color: THEME.primary,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  standardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  // Standard Square Card (for standards view)
+  standardSquareCard: {
+    width: '48%',
+    marginBottom: 16,
+  },
+  standardSquareContent: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  standardSquareTop: {
+    borderTopWidth: 4,
+    paddingTop: 16,
+    paddingBottom: 12,
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  standardSquareIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  standardSquareBottom: {
+    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  standardSquareTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 12,
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  standardSquareStats: {
+    marginBottom: 0,
+  },
+  standardSquareStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  standardSquareStatText: {
+    fontSize: 12,
+    color: '#636e72',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  // Board Stats Container
+  boardStatsContainer: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  boardStatsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  boardStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  boardStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  boardStatNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#2d3436',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  boardStatLabel: {
+    fontSize: 12,
+    color: '#636e72',
+    fontWeight: '600',
+  },
+  standardSquareSubtitle: {
+    fontSize: 14,
+    color: '#2d3436',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  standardSquareSubjects: {
+    fontSize: 12,
+    color: '#636e72',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   // Subjects Grid
   subjectsGrid: {
