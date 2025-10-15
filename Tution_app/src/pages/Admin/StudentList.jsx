@@ -631,6 +631,175 @@ export default function StudentList() {
     setSearchQuery('');
   };
 
+  // Generate a variant of the theme color based on the board name
+  const getBoardColor = (boardName) => {
+    if (!boardName) return THEME.primary;
+    
+    const nameHash = boardName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    const variants = [
+      THEME.primary,
+      THEME.light,
+      THEME.lighter,
+      THEME.lightest,
+      THEME.dark,
+    ];
+    
+    return variants[nameHash % variants.length];
+  };
+
+  // Render board section with elegant cards
+  const renderBoardSection = (boardData, boardIndex) => {
+    const boardColor = getBoardColor(boardData.board);
+    const totalStudents = boardData.standards.reduce(
+      (total, std) => total + std.subjects.reduce((stdTotal, subj) => stdTotal + subj.students.length, 0), 
+      0
+    );
+    const totalStandards = boardData.standards.length;
+    const isExpanded = expandedBoards[boardData.board];
+    
+    return (
+      <View key={`board-${boardIndex}`} style={styles.boardContainer}>
+        <View style={[styles.boardCard, { borderTopColor: boardColor }]}>
+          <TouchableOpacity
+            style={styles.boardHeaderContent}
+            onPress={() => toggleBoardExpansion(boardData.board)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.boardTitleRow}>
+              <View style={[styles.boardIconCircle, { backgroundColor: boardColor + '20' }]}>
+                <Icon name="account-balance" size={22} color={boardColor} />
+              </View>
+              <View style={styles.boardTextContainer}>
+                <Text style={[styles.boardTitle, { color: boardColor }]}>{boardData.board}</Text>
+                <Text style={styles.boardSubtitle}>
+                  {totalStudents} {totalStudents === 1 ? 'student' : 'students'} • {totalStandards} {totalStandards === 1 ? 'standard' : 'standards'}
+                </Text>
+              </View>
+              <Icon 
+                name={isExpanded ? "expand-less" : "expand-more"} 
+                size={24} 
+                color={boardColor} 
+              />
+            </View>
+          </TouchableOpacity>
+          
+          {isExpanded && (
+            <View style={styles.standardsContainer}>
+              {boardData.standards.map((standardData, stdIndex) => 
+                renderStandardSection(standardData, boardColor, boardData.board, stdIndex)
+              )}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  // Render standard section
+  const renderStandardSection = (standardData, boardColor, boardName, stdIndex) => {
+    const standardColor = boardColor === THEME.primary ? THEME.light : 
+                         boardColor === THEME.light ? THEME.lighter : 
+                         boardColor === THEME.lighter ? THEME.lightest :
+                         THEME.primary;
+    const standardKey = `${boardName}-${standardData.standard}`;
+    const isExpanded = expandedStandards[standardKey];
+    const totalStudents = standardData.subjects.reduce((total, subj) => total + subj.students.length, 0);
+    
+    return (
+      <View key={`std-${stdIndex}`} style={styles.standardContainer}>
+        <View style={styles.standardCard}>
+          <TouchableOpacity
+            style={styles.standardHeaderRow}
+            onPress={() => toggleStandardExpansion(standardKey)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.standardIconCircle, { backgroundColor: standardColor + '20' }]}>
+              <Icon name="class" size={18} color={standardColor} />
+            </View>
+            <Text style={[styles.standardTitle, { color: standardColor }]}>
+              Standard {standardData.standard}
+            </Text>
+            <Text style={styles.standardSubjectCount}>
+              {totalStudents} {totalStudents === 1 ? 'student' : 'students'}
+            </Text>
+            <Icon 
+              name={isExpanded ? "expand-less" : "expand-more"} 
+              size={20} 
+              color={standardColor}
+              style={{ marginLeft: 8 }}
+            />
+          </TouchableOpacity>
+          
+          {isExpanded && (
+            <View style={styles.subjectsGrid}>
+              {standardData.subjects.map((subjectData, subIndex) => 
+                renderSubjectSection(subjectData, standardColor, boardName, standardData.standard, subIndex)
+              )}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  // Render subject section
+  const renderSubjectSection = (subjectData, standardColor, boardName, standard, subIndex) => {
+    const subjectColor = standardColor === THEME.light ? THEME.lighter : 
+                       standardColor === THEME.lighter ? THEME.lightest :
+                       standardColor === THEME.lightest ? THEME.primary :
+                       THEME.light;
+    const subjectKey = `${boardName}-${standard}-${subjectData.subject}`;
+    const isExpanded = expandedSubjects[subjectKey];
+    const studentCount = subjectData.students.length;
+    
+    return (
+      <View key={`subj-${subIndex}`} style={styles.subjectContainer}>
+        <TouchableOpacity 
+          style={styles.subjectChip}
+          onPress={() => toggleSubjectExpansion(subjectKey)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.subjectIconDot, { backgroundColor: subjectColor }]} />
+          <Text style={styles.subjectChipText} numberOfLines={1}>
+            {subjectData.subject}
+          </Text>
+          <View style={styles.studentCountBadge}>
+            <Text style={styles.studentCountText}>
+              {studentCount} {studentCount === 1 ? 'student' : 'students'}
+            </Text>
+          </View>
+          <Icon 
+            name={isExpanded ? "expand-less" : "expand-more"} 
+            size={16} 
+            color="#999"
+          />
+        </TouchableOpacity>
+        
+        {isExpanded && (
+          <View style={styles.studentsListContainer}>
+            {subjectData.students.map((student, studentIndex) => (
+              <View key={`student-${studentIndex}`} style={styles.studentItemCard}>
+                <View style={styles.studentInfo}>
+                  <Text style={styles.studentName}>{student.name}</Text>
+                  <Text style={styles.studentEmail}>{student.email}</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.infoIconContainer}
+                  onPress={() => openActionModal(student)}
+                >
+                  <View style={styles.infoCircle}>
+                    <Icon name="info" size={16} color={THEME.text.light} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   // Add new method to render grouped students
   const renderGroupedStudents = () => {
     if (groupedData.length === 0) {
@@ -727,47 +896,116 @@ export default function StudentList() {
 
   return (
     <View style={styles.container}>
+      {/* Elegant Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Student Management</Text>
-        <Text style={styles.headerSubtitle}>View and manage students</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Student Management</Text>
+            <Text style={styles.headerSubtitle}>View and manage students across all subjects</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.headerAddButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Icon name="person-add" size={28} color={THEME.text.light} />
+          </TouchableOpacity>
+        </View>
       </View>
-      
-      <View style={styles.contentContainer}>
+
+      {/* Subject List */}
+      <ScrollView 
+        style={styles.listContainer}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={fetchStudents}
+      >
+        {/* Quick Stats Dashboard in Single Line */}
+        <View style={styles.statsDashboard}>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, styles.statCard1]}>
+              <Icon name="school" size={20} color={THEME.primary} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>{students.length}</Text>
+                <Text style={styles.statLabel}>Students</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.statCard2]}>
+              <Icon name="class" size={20} color={THEME.light} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>
+                  {[...new Set(students.flatMap(s => s.subjects?.map(subj => subj.standard) || []))].length}
+                </Text>
+                <Text style={styles.statLabel}>Standards</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.statCard3]}>
+              <Icon name="account-balance" size={20} color={THEME.lighter} />
+              <View style={styles.statTextContainer}>
+                <Text style={styles.statNumber}>
+                  {[...new Set(students.flatMap(s => s.subjects?.map(subj => subj.board) || []))].length}
+                </Text>
+                <Text style={styles.statLabel}>Boards</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <Icon name="search" size={20} color="#6c757d" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search by name, email, standard, subject..."
-              placeholderTextColor="#adb5bd"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
-                <Icon name="clear" size={18} color="#6c757d" />
+          <Icon name="search" size={20} color="#7f8c8d" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, email, subject..."
+            placeholderTextColor="#adb5bd"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
+              <Icon name="clear" size={18} color="#7f8c8d" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {groupedData.length > 0 ? (
+          <View style={styles.subjectsWrapper}>
+            <View style={styles.sectionHeaderContainer}>
+              <Icon name="folder-open" size={20} color={THEME.primary} />
+              <Text style={styles.sectionHeaderText}>All Students</Text>
+              <View style={styles.sectionHeaderLine} />
+            </View>
+            {groupedData.map((boardData, boardIndex) => renderBoardSection(boardData, boardIndex))}
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconCircle}>
+              <Icon name={isSearching ? "search-off" : "school"} size={60} color={THEME.lightest} />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {isSearching ? "No matching students" : "No Students Yet"}
+            </Text>
+            <Text style={styles.emptyText}>
+              {isSearching 
+                ? "Try a different search term" 
+                : "Start by adding your first student to get organized"
+              }
+            </Text>
+            {!isSearching && (
+              <TouchableOpacity 
+                style={styles.emptyButton}
+                onPress={() => setModalVisible(true)}
+              >
+                <Icon name="person-add" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.emptyButtonText}>Add Your First Student</Text>
               </TouchableOpacity>
             )}
           </View>
-          
-          <View style={styles.actionContainer}>
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <Icon name="person-add" size={18} color={THEME.text.light} />
-              <Text style={styles.buttonText}>Add Student</Text>
-            </TouchableOpacity>
-            
-            <Text style={styles.countText}>
-              {isSearching ? `${filteredStudents.length} found` : `${students.length} Students`}
-            </Text>
-          </View>
-        </View>
-        
-        {renderGroupedStudents()}
-      </View>
+        )}
+      </ScrollView>
       
       {/* Add Student Modal - Full Screen */}
       <Modal
@@ -1031,19 +1269,406 @@ export default function StudentList() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f8f9fa'
+    backgroundColor: '#f5f7fa'
   },
   header: {
     backgroundColor: THEME.primary,
-    paddingVertical: 24,
+    paddingTop: 20,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    shadowColor: THEME.primary,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: THEME.text.light,
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '400',
+  },
+  headerAddButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  // Stats Dashboard
+  statsDashboard: {
+    marginBottom: 20,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  statCard1: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.primary,
+  },
+  statCard2: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.light,
+  },
+  statCard3: {
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.lighter,
+  },
+  statTextContainer: {
+    marginLeft: 8,
+    alignItems: 'flex-start',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2d3436',
+    lineHeight: 20,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#636e72',
+    fontWeight: '600',
+  },
+  // List Container
+  listContainer: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+  // Search Container
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#2d3436',
+  },
+  clearButton: {
+    padding: 8,
+  },
+  subjectsWrapper: {
+    marginTop: 10,
+  },
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginLeft: 8,
+  },
+  sectionHeaderLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: THEME.lightest + '40',
+    marginLeft: 12,
+    borderRadius: 1,
+  },
+  // Board Card
+  boardContainer: {
+    marginBottom: 20,
+  },
+  boardCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    borderTopWidth: 4,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  boardHeaderContent: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  boardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  boardIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  boardTextContainer: {
+    flex: 1,
+  },
+  boardTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  boardSubtitle: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    fontWeight: '500',
+  },
+  standardsContainer: {
+    marginTop: 8,
+  },
+  // Standard Card
+  standardContainer: {
+    marginBottom: 16,
+  },
+  standardCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 14,
+    padding: 16,
+  },
+  standardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  standardIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  standardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+    letterSpacing: 0.2,
+  },
+  standardSubjectCount: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    fontWeight: '600',
+  },
+  // Subjects Grid
+  subjectsGrid: {
+    marginTop: 4,
+  },
+  subjectContainer: {
+    marginBottom: 8,
+  },
+  subjectChip: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  subjectIconDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  subjectChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d3436',
+    marginRight: 6,
+    flex: 1,
+  },
+  studentCountBadge: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  studentCountText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#7f8c8d',
+  },
+  // Students List
+  studentsListContainer: {
+    marginTop: 8,
+    marginLeft: 12,
+  },
+  studentItemCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.lightest,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  studentInfo: {
+    flex: 1,
+  },
+  studentName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#2d3436',
+  },
+  studentEmail: {
+    fontSize: 13,
+    color: '#7f8c8d',
+  },
+  infoIconContainer: {
+    marginLeft: 8,
+  },
+  infoCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: THEME.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Empty State
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 30,
+  },
+  emptyIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: THEME.lightest + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 8,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 15,
+    color: '#636e72',
+    marginBottom: 30,
+    lineHeight: 22,
+    paddingHorizontal: 20,
+  },
+  emptyButton: {
+    backgroundColor: THEME.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: THEME.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  emptyButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 15,
   },
   // Full screen modal styles
   fullScreenModalContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f5f7fa',
   },
   fullScreenModalHeader: {
     backgroundColor: THEME.primary,
@@ -1052,13 +1677,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    elevation: 3,
+    elevation: 8,
+    shadowColor: THEME.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   backButton: {
     padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
   },
   headerSpacer: {
-    width: 40, // Balance the header layout
+    width: 40,
   },
   fullScreenModalTitle: {
     fontSize: 18,
@@ -1068,8 +1702,9 @@ const styles = StyleSheet.create({
   },
   fullScreenModalSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
     textAlign: 'center',
+    marginTop: 2,
   },
   fullScreenScrollView: {
     flex: 1,
@@ -1078,13 +1713,105 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   fullScreenFormSection: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   fullScreenSectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: THEME.primary,
+    marginBottom: 20,
+    letterSpacing: 0.3,
+  },
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  addSubjectButton: {
+    padding: 5,
+  },
+  subjectFormContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  subjectFormHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  subjectFormTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  subjectFormTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  removeSubjectButton: {
+    padding: 5,
+  },
+  formFieldContainer: {
+    marginBottom: 18,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 10,
+    color: THEME.text.dark,
+    marginLeft: 2,
+    letterSpacing: 0.2,
+  },
+  input: {
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    padding: 14,
+    borderRadius: 12,
+    fontSize: 16,
+    backgroundColor: '#f8f9fa',
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    color: '#2d3436',
+    fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e9ecef',
+    marginVertical: 0,
+  },
+  noteText: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+    marginTop: 12,
+    paddingHorizontal: 4,
   },
   fixedBottomBar: {
     position: 'absolute',
@@ -1095,11 +1822,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e9ecef',
     backgroundColor: '#ffffff',
-    elevation: 8,
+    elevation: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   fixedCancelButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     borderRightWidth: 0.5,
     borderRightColor: '#e9ecef',
@@ -1107,451 +1841,91 @@ const styles = StyleSheet.create({
   },
   fixedSubmitButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     backgroundColor: THEME.primary,
     borderLeftWidth: 0.5,
     borderLeftColor: '#e9ecef',
   },
-  headerTitle: {
-    fontSize: 24,
+  cancelButtonText: {
+    color: '#636e72',
     fontWeight: '700',
-    color: THEME.text.light,
-    marginBottom: 4
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  contentContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  searchContainer: {
-    marginBottom: 16,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    paddingHorizontal: 10,
-    marginBottom: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 10,
     fontSize: 16,
-    color: '#495057',
   },
-  clearButton: {
-    padding: 8,
-  },
-  actionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  addButton: {
-    backgroundColor: THEME.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  buttonText: {
+  submitButtonText: {
     color: 'white',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  countText: {
-    color: '#666',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  studentInfo: {
-    flex: 1,
-  },
-  studentName: {
+    fontWeight: '700',
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#333',
   },
-  studentEmail: {
-    fontSize: 14,
-    color: '#666',
-  },
-  infoIconContainer: {
-    marginLeft: 8,
-  },
-  infoCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: THEME.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#6c757d',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: '#adb5bd',
-    textAlign: 'center',
-  },
+  // Action Modal
   centeredView: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: 'rgba(0,0,0,0.5)'
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
-  modalView: {
-    width: '90%',
-    maxHeight: '80%',
-    backgroundColor: "white",
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5
-  },
-  modalHeader: {
-    paddingTop: 20,
-    paddingHorizontal: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 12,
-    textAlign: "center",
-    color: THEME.primary
-  },
-  modalDivider: {
-    height: 1,
-    backgroundColor: '#e9ecef',
-    marginBottom: 16
-  },
-  formContainer: {
-    padding: 20,
-  },
-  sectionHeaderContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: THEME.primary,
-  },
-  addSubjectButton: {
-    padding: 5,
-  },
-  subjectFormContainer: {
-    backgroundColor: '#f8f9fa',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 1.5,
-    elevation: 1,
-  },
-  subjectFormHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  subjectFormTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  subjectFormTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: THEME.primary,
-  },
-  formFieldContainer: {
-    marginBottom: 12,
-  },
-  removeSubjectButton: {
-    padding: 5,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: '#495057',
-    marginLeft: 2,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    padding: 12,
-    borderRadius: 10,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e9ecef',
-    marginVertical: 16,
-  },
-  noteText: {
-    fontSize: 13,
-    color: '#6c757d',
-    fontStyle: 'italic',
-    marginTop: 8,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderRightWidth: 0.5,
-    borderRightColor: '#e9ecef',
-  },
-  cancelButtonText: {
-    color: '#6c757d',
-    fontWeight: '600',
-    fontSize: 16
-  },
-  submitButton: {
-    flex: 1,
-    paddingVertical: 16,
-    alignItems: 'center',
-    backgroundColor: THEME.primary,
-    borderLeftWidth: 0.5,
-    borderLeftColor: '#e9ecef',
-  },
-  submitButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16
-  },
-  // Action Modal Styles
   actionModalView: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    width: '80%',
+    borderRadius: 24,
+    width: '85%',
     padding: 0,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 8,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    overflow: 'hidden'
+    shadowRadius: 12,
+    elevation: 10,
+    overflow: 'hidden',
   },
   actionModalHeader: {
-    padding: 20,
+    padding: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
   },
   actionModalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: THEME.primary,
-    marginBottom: 4
+    marginBottom: 6,
+    letterSpacing: 0.3,
   },
   actionModalSubtitle: {
     fontSize: 14,
-    color: '#6c757d',
+    color: '#636e72',
+    fontWeight: '500',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   actionIcon: {
-    marginRight: 15,
+    marginRight: 16,
   },
   actionText: {
     fontSize: 16,
-    color: '#495057',
+    color: '#2d3436',
+    fontWeight: '600',
   },
   deleteButton: {
     borderBottomWidth: 0,
   },
   closeButton: {
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
-    backgroundColor: '#f8f9fa'
+    backgroundColor: '#f8f9fa',
   },
   closeButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6c757d'
-  },
-  groupedListContainer: {
-    flex: 1,
-  },
-  boardContainer: {
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 2.22,
-    elevation: 2,
-  },
-  boardHeader: {
-    backgroundColor: THEME.lightest + '20',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderLeftWidth: 4,
-    borderLeftColor: THEME.primary,
-  },
-  boardTitle: {
-    fontSize: 16,
     fontWeight: '700',
-    color: THEME.primary,
-  },
-  standardContainer: {
-    paddingLeft: 8,
-  },
-  standardHeader: {
-    backgroundColor: THEME.lightest + '10',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderLeftWidth: 3,
-    borderLeftColor: THEME.light,
-  },
-  standardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: THEME.light,
-  },
-  subjectContainer: {
-    paddingLeft: 8,
-  },
-  subjectHeader: {
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderLeftWidth: 2,
-    borderLeftColor: THEME.lighter,
-  },
-  subjectTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: THEME.lighter,
-  },
-  studentItemCompact: {
-    backgroundColor: '#fff',
-    padding: 12,
-    paddingLeft: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  studentName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#333',
-  },
-  studentEmail: {
-    fontSize: 14,
-    color: '#666',
-  },
-  infoIconContainer: {
-    marginLeft: 8,
-  },
-  infoCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: THEME.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#6c757d',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: '#adb5bd',
-    textAlign: 'center',
+    color: '#636e72',
   },
 });
