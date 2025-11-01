@@ -326,58 +326,99 @@ exports.updateFacultyWithSubjects = async (req, res) => {
         );
       }
 
-      // Find removed subject IDs and delete corresponding student mappings from subjectmap
+      // Find removed subject IDs (subjects that existed before but are not in the new list)
       const removedSubjectIds = oldSubjectIds.filter(oldId => !subjectIds.includes(oldId));
-      
+
       if (removedSubjectIds.length > 0) {
         console.log(`Removed subjects: ${JSON.stringify(removedSubjectIds)}`);
-        
-        // Delete from subjectmap ONLY for this faculty's students AND removed subjects
-        if (currentStudentIds.length > 0) {
+
+        // Ensure we have a list of student IDs to consider. If facultymap.student_id was empty
+        // or not parsable we fallback to finding students who have mappings for any of the old subjects.
+        let studentIdsToConsider = Array.isArray(currentStudentIds) && currentStudentIds.length > 0
+          ? currentStudentIds
+          : [];
+
+        if (studentIdsToConsider.length === 0) {
+          // Find distinct students who had mappings for any of the old subjects
           const subjectPlaceholders = removedSubjectIds.map(() => '?').join(',');
-          const studentPlaceholders = currentStudentIds.map(() => '?').join(',');
-          
+          const [studentsWithOldSubjects] = await connection.query(
+            `SELECT DISTINCT user_id FROM subjectmap WHERE subject_id IN (${subjectPlaceholders})`,
+            removedSubjectIds
+          );
+          studentIdsToConsider = studentsWithOldSubjects.map(r => Number(r.user_id));
+        }
+
+        if (studentIdsToConsider.length > 0) {
+          // Delete only the subjectmap entries for the removed subjects for these students
+          const subjectPlaceholders = removedSubjectIds.map(() => '?').join(',');
+          const studentPlaceholders = studentIdsToConsider.map(() => '?').join(',');
+
           const [deleteResult] = await connection.query(
             `DELETE FROM subjectmap 
              WHERE subject_id IN (${subjectPlaceholders})
              AND user_id IN (${studentPlaceholders})`,
-            [...removedSubjectIds, ...currentStudentIds]
+            [...removedSubjectIds, ...studentIdsToConsider]
           );
-          
+
           console.log(`Deleted ${deleteResult.affectedRows} student-subject mappings for removed subjects`);
-        }
-        
-        // Now update the facultymap student_id array to remove students who have NO subjects left with this faculty
-        if (currentStudentIds.length > 0) {
-          // For each student, check if they still have any subjects mapped to this faculty's remaining subjects
+
+          // Now update facultymap.student_id to remove students who no longer have any of the remaining
+          // faculty subjects. We will rebuild the array by checking for each student.
           const remainingStudentIds = [];
-          
-          for (const studentId of currentStudentIds) {
-            // Check if student still has any of the remaining subjects
-            const placeholders = subjectIds.map(() => '?').join(',');
+
+          for (const studentId of studentIdsToConsider) {
+            // Check if student still has any of the remaining subjects mapped
+            if (subjectIds.length === 0) {
+              // If no remaining subjects for the faculty, student cannot remain
+              continue;
+            }
+
+            const remainingPlaceholders = subjectIds.map(() => '?').join(',');
             const [studentSubjects] = await connection.query(
               `SELECT COUNT(*) as count FROM subjectmap 
-               WHERE user_id = ? AND subject_id IN (${placeholders})`,
+               WHERE user_id = ? AND subject_id IN (${remainingPlaceholders})`,
               [studentId, ...subjectIds]
             );
-            
-            // If student still has subjects with this faculty, keep them in the array
+
             if (studentSubjects[0].count > 0) {
-              remainingStudentIds.push(studentId);
+              remainingStudentIds.push(Number(studentId));
             }
           }
-          
-          console.log(`Students still with faculty: ${remainingStudentIds.length} out of ${currentStudentIds.length}`);
-          
-          // Always update facultymap with the remaining students
-          const updatedStudentIdsJson = remainingStudentIds.length > 0 
-            ? JSON.stringify(remainingStudentIds) 
-            : null;
-            
-          await connection.query(
-            'UPDATE facultymap SET student_id = ? WHERE user_id = ?',
-            [updatedStudentIdsJson, id]
+
+          console.log(`Students still with faculty after removal: ${remainingStudentIds.length} out of ${studentIdsToConsider.length}`);
+
+          // Merge with any other students that may still be in facultymap.student_id but were not
+          // part of studentIdsToConsider (avoid accidental deletion). Fetch current stored array one more time.
+          const [latestMappingRows] = await connection.query(
+            'SELECT student_id FROM facultymap WHERE user_id = ? LIMIT 1',
+            [id]
           );
+
+          let finalStudentArray = remainingStudentIds.slice();
+          if (latestMappingRows.length > 0 && latestMappingRows[0].student_id) {
+            try {
+              const stored = typeof latestMappingRows[0].student_id === 'string' ? JSON.parse(latestMappingRows[0].student_id) : latestMappingRows[0].student_id;
+              if (Array.isArray(stored)) {
+                // Keep any students from stored array that still appear in the DB as having remaining subjects
+                for (const s of stored) {
+                  const sid = Number(s);
+                  if (finalStudentArray.indexOf(sid) === -1) {
+                    // Double-check student still has any of the remaining faculty subjects
+                    const [check] = await connection.query(
+                      `SELECT COUNT(*) as count FROM subjectmap WHERE user_id = ? AND subject_id IN (${subjectIds.map(() => '?').join(',')})`,
+                      [sid, ...subjectIds]
+                    );
+                    if (check[0].count > 0) finalStudentArray.push(sid);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse latest facultymap.student_id JSON:', e);
+            }
+          }
+
+          const updatedStudentIdsJson = finalStudentArray.length > 0 ? JSON.stringify(finalStudentArray) : null;
+          await connection.query('UPDATE facultymap SET student_id = ? WHERE user_id = ?', [updatedStudentIdsJson, id]);
         }
       }
 

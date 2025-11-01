@@ -9,55 +9,45 @@ exports.getFacultyStudentMappings = async (req, res) => {
   try {
     const { facultyId } = req.params;
 
-    // 1. Get faculty's subject IDs
-    const [facultyMappings] = await pool.promise().query(
-      'SELECT subject_id FROM facultymap WHERE user_id = ? AND subject_id IS NOT NULL',
+    // 1. Get facultymap row for this faculty (we need both subject_id and student_id)
+    const [facultymapRows] = await pool.promise().query(
+      'SELECT subject_id, student_id FROM facultymap WHERE user_id = ? LIMIT 1',
       [facultyId]
     );
 
-    if (facultyMappings.length === 0) {
-      return res.status(200).json({ success: true, count: 0, data: [] });
-    }
-
-    // Parse faculty's subject IDs from JSON array
+    // Parse faculty's subject IDs from JSON array (may be empty/null)
     let facultySubjectIds = [];
-    try {
-      const storedIds = facultyMappings[0].subject_id;
-      const parsedIds = typeof storedIds === 'string' ? JSON.parse(storedIds) : storedIds;
-      if (Array.isArray(parsedIds)) {
-        facultySubjectIds = parsedIds.map(id => Number(id));
+    if (facultymapRows.length > 0 && facultymapRows[0].subject_id) {
+      try {
+        const storedIds = facultymapRows[0].subject_id;
+        const parsedIds = typeof storedIds === 'string' ? JSON.parse(storedIds) : storedIds;
+        if (Array.isArray(parsedIds)) {
+          facultySubjectIds = parsedIds.map(id => Number(id));
+        }
+      } catch (e) {
+        console.error('Failed to parse faculty subject_id JSON:', facultymapRows[0].subject_id);
       }
-    } catch (e) {
-      console.error("Failed to parse faculty subject_id JSON:", facultyMappings[0].subject_id);
     }
 
-    if (facultySubjectIds.length === 0) {
+    // Parse student IDs from facultymap (if present). If no students mapped, return empty list.
+    let studentIds = [];
+    if (facultymapRows.length > 0 && facultymapRows[0].student_id) {
+      try {
+        const stored = facultymapRows[0].student_id;
+        const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          studentIds = parsed.map(id => Number(id));
+        }
+      } catch (e) {
+        console.error('Failed to parse student_id JSON:', facultymapRows[0].student_id);
+        return res.status(500).json({ success: false, message: 'Corrupted student mapping data.' });
+      }
+    }
+
+    if (!studentIds || studentIds.length === 0) {
       return res.status(200).json({ success: true, count: 0, data: [] });
     }
 
-    // 2. Get student IDs mapped to this faculty
-    const [studentMappings] = await pool.promise().query(
-      'SELECT student_id FROM facultymap WHERE user_id = ? LIMIT 1',
-      [facultyId]
-    );
-
-    if (studentMappings.length === 0 || !studentMappings[0].student_id) {
-      return res.status(200).json({ success: true, count: 0, data: [] });
-    }
-
-    // Parse student IDs
-    let studentIds;
-    try {
-      const storedIds = studentMappings[0].student_id;
-      studentIds = typeof storedIds === 'string' ? JSON.parse(storedIds) : storedIds;
-      if (!Array.isArray(studentIds) || studentIds.length === 0) {
-        return res.status(200).json({ success: true, count: 0, data: [] });
-      }
-    } catch (e) {
-      console.error("Failed to parse student_id JSON:", studentMappings[0].student_id);
-      return res.status(500).json({ success: false, message: 'Corrupted student mapping data.' });
-    }
-    
     const numericStudentIds = studentIds.map(id => Number(id));
 
     // 3. Fetch student details
@@ -66,9 +56,18 @@ exports.getFacultyStudentMappings = async (req, res) => {
       [numericStudentIds]
     );
 
-    // 4. For each student, fetch ONLY subjects that belong to this faculty
+    // 4. For each student, fetch ONLY subjects that belong to this faculty (if the faculty has subjects)
+    // If the faculty has no subjects, return the students with an empty subjects array so the UI
+    // still shows the mapped students after subject deletions.
     const studentsWithSubjects = await Promise.all(
       students.map(async (student) => {
+        if (!facultySubjectIds || facultySubjectIds.length === 0) {
+          return {
+            ...student,
+            subjects: []
+          };
+        }
+
         const placeholders = facultySubjectIds.map(() => '?').join(',');
         const [subjectMappings] = await pool.promise().query(
           `SELECT s.id, s.subjectname, s.standard, s.board 
@@ -77,7 +76,7 @@ exports.getFacultyStudentMappings = async (req, res) => {
            WHERE sm.user_id = ? AND sm.subject_id IN (${placeholders})`,
           [student.id, ...facultySubjectIds]
         );
-        
+
         return {
           ...student,
           subjects: subjectMappings
